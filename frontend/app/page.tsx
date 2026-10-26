@@ -4,6 +4,7 @@
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const MapView = dynamic(() => import("./MapView"), { ssr: false });
 
 type Summary = {
