@@ -1,0 +1,3666 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+architecture/
+  architecture_summary.md
+backend/
+  app/
+    __init__.py
+    adapters.py
+    data.py
+    main.py
+    network_graph.py
+  .env.example
+  .gitignore
+  requirements.txt
+  test_main.py
+frontend/
+  app/
+    favicon.ico
+    globals.css
+    layout.tsx
+    MapView.tsx
+    network-types.ts
+    page.tsx
+  public/
+    file.svg
+    globe.svg
+    next.svg
+    vercel.svg
+    window.svg
+  .gitignore
+  AGENTS.md
+  CLAUDE.md
+  eslint.config.mjs
+  next.config.ts
+  package.json
+  postcss.config.mjs
+  README.md
+  tsconfig.json
+.env.example
+.gitignore
+README.md
+UAT_CHECKLIST.md
+VAR_REPORT.md
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="architecture/architecture_summary.md">
+# Architecture Summary
+
+## Project
+
+**Internet Backbone & IXP Map**
+
+---
+
+## Overview
+
+The Internet Backbone & IXP Map is an interactive network intelligence dashboard that visualizes global Internet infrastructure, including Internet Exchange Points (IXPs), data center facilities, and backbone corridors. It enables users to explore connectivity, inspect facilities, and simulate route failures to understand the impact on network traffic.
+
+---
+
+## High-Level Architecture
+
+```
++-----------------------------+
+|         User Browser        |
++-------------+---------------+
+              |
+              v
++-----------------------------+
+|     Next.js + React UI      |
+|                             |
+| - Dashboard                 |
+| - React Components          |
+| - React Leaflet Map         |
+| - Filters                   |
+| - Route Simulation          |
++-------------+---------------+
+              |
+              |
+      REST API Calls
+              |
+              v
++-----------------------------+
+|      FastAPI Backend        |
+|                             |
+| - API Endpoints             |
+| - Network Topology Data     |
+| - Simulation Logic          |
++-------------+---------------+
+              |
+              v
++-----------------------------+
+|      Sample Dataset         |
+|                             |
+| - Regions                   |
+| - IXPs                      |
+| - Facilities                |
+| - Backbone Corridors        |
++-----------------------------+
+```
+
+---
+
+## Frontend
+
+- Next.js
+- React
+- TypeScript
+- React Leaflet
+- Tailwind CSS
+
+Responsibilities:
+
+- Render the interactive world map
+- Display facilities and IXPs
+- Display backbone corridors
+- Apply filters
+- Simulate route failures
+- Display network metrics
+
+---
+
+## Backend
+
+- FastAPI
+- Python
+
+Responsibilities:
+
+- Serve topology data
+- Provide corridor information
+- Supply simulation data
+- Expose REST API endpoints
+
+---
+
+## Core Features
+
+- Interactive global map
+- Facility visualization
+- IXP visualization
+- Backbone corridor visualization
+- Route selection
+- Route failure simulation
+- Alternative route visualization
+- Network statistics dashboard
+- Interactive filters
+
+---
+
+## Data Flow
+
+1. User opens the application.
+2. Frontend requests topology data from the FastAPI backend.
+3. Backend returns regions, facilities, IXPs, and corridors.
+4. Frontend renders the map and dashboard.
+5. User interactions update the dashboard and route visualization.
+6. Route failure simulation recalculates and displays alternative paths.
+
+---
+
+## Conclusion
+
+The application demonstrates a modular full-stack architecture with a React-based frontend and a FastAPI backend, providing an interactive visualization of Internet backbone infrastructure and simulated network resilience.
+</file>
+
+<file path="backend/app/__init__.py">
+
+</file>
+
+<file path="backend/app/adapters.py">
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+from typing import Protocol
+
+from app.data import NETWORK_DATASET, get_mock_route_simulation
+
+
+class NetworkDataAdapter(Protocol):
+    def get_dataset(self) -> dict:
+        ...
+
+    def get_route_simulation(
+        self,
+        *,
+        ixp: str | None = None,
+        facility: str | None = None,
+        cable: str | None = None,
+    ) -> dict:
+        ...
+
+
+class MockNetworkDataAdapter:
+    def __init__(self, dataset: dict | None = None):
+        self._dataset = dataset or NETWORK_DATASET
+
+    def get_dataset(self) -> dict:
+        return self._dataset
+
+    def get_route_simulation(
+        self,
+        *,
+        ixp: str | None = None,
+        facility: str | None = None,
+        cable: str | None = None,
+    ) -> dict:
+        return get_mock_route_simulation(ixp=ixp, facility=facility, cable=cable)
+
+
+class FileNetworkDataAdapter(MockNetworkDataAdapter):
+    def __init__(self, dataset_path: str | os.PathLike[str]):
+        path = Path(dataset_path)
+        with path.open("r", encoding="utf-8") as handle:
+            dataset = json.load(handle)
+        super().__init__(dataset)
+
+
+def load_network_data_adapter() -> NetworkDataAdapter:
+    dataset_path = os.getenv("REAL_RAILS_DATASET_PATH")
+    if dataset_path:
+        try:
+            return FileNetworkDataAdapter(dataset_path)
+        except (FileNotFoundError, OSError, json.JSONDecodeError):
+            pass
+
+    return MockNetworkDataAdapter()
+</file>
+
+<file path="backend/app/data.py">
+from __future__ import annotations
+from app.network_graph import NetworkGraph
+
+NETWORK_DATASET = {
+    "summary": {
+        "backbone_nodes": 23,
+        "ixp_sites": 23,
+        "regions": 6,
+        "total_capacity_gbps": 14850,
+        "active_links": 33,
+        "peak_utilization_pct": 84,
+    },
+    "regions": [
+        {"name": "Europe", "nodes": 7, "traffic_index": 94, "dependency": "High"},
+        {"name": "North America", "nodes": 5, "traffic_index": 91, "dependency": "High"},
+        {"name": "Asia Pacific", "nodes": 7, "traffic_index": 88, "dependency": "Moderate"},
+        {"name": "Middle East", "nodes": 1, "traffic_index": 76, "dependency": "Moderate"},
+        {"name": "Africa", "nodes": 2, "traffic_index": 69, "dependency": "Elevated"},
+        {"name": "South America", "nodes": 1, "traffic_index": 72, "dependency": "Moderate"},
+    ],
+    "asns": [
+        {"asn": 3356, "name": "Level 3", "region": "Global", "role": "Transit"},
+        {"asn": 1299, "name": "Arelion", "region": "Europe", "role": "Carrier"},
+        {"asn": 6939, "name": "Hurricane Electric", "region": "North America", "role": "Carrier"},
+        {"asn": 15169, "name": "Google", "region": "Global", "role": "Hyperscale"},
+        {"asn": 13335, "name": "Cloudflare", "region": "Global", "role": "Edge"},
+        {"asn": 6453, "name": "Tata Communications", "region": "Global", "role": "Backbone"},
+    ],
+    "operators": [
+        {"name": "Equinix", "ownership": "Carrier-neutral colocation", "influence": "High"},
+        {"name": "Digital Realty", "ownership": "Wholesale data center operator", "influence": "High"},
+        {"name": "Google", "ownership": "Hyperscale infrastructure", "influence": "Very High"},
+        {"name": "Cloudflare", "ownership": "Edge delivery network", "influence": "High"},
+        {"name": "LINX", "ownership": "Internet exchange operator", "influence": "Medium"},
+        {"name": "AMS-IX", "ownership": "Regional exchange hub", "influence": "Medium"},
+        {"name": "DE-CIX", "ownership": "Global exchange provider", "influence": "High"},
+        {"name": "NTT", "ownership": "Global telecom backbone", "influence": "High"},
+    ],
+    "ixps": [
+        {"id": "IXP-101", "name": "London", "country": "United Kingdom", "region": "Europe", "lat": 51.5074, "lng": -0.1278, "members": 220},
+        {"id": "IXP-102", "name": "Frankfurt", "country": "Germany", "region": "Europe", "lat": 50.1109, "lng": 8.6821, "members": 190},
+        {"id": "IXP-103", "name": "Amsterdam", "country": "Netherlands", "region": "Europe", "lat": 52.3676, "lng": 4.9041, "members": 175},
+        {"id": "IXP-104", "name": "Paris", "country": "France", "region": "Europe", "lat": 48.8566, "lng": 2.3522, "members": 165},
+        {"id": "IXP-105", "name": "Madrid", "country": "Spain", "region": "Europe", "lat": 40.4168, "lng": -3.7038, "members": 120},
+        {"id": "IXP-106", "name": "Milan", "country": "Italy", "region": "Europe", "lat": 45.4642, "lng": 9.1900, "members": 110},
+        {"id": "IXP-107", "name": "Dublin", "country": "Ireland", "region": "Europe", "lat": 53.3498, "lng": -6.2603, "members": 95},
+        {"id": "IXP-201", "name": "New York", "country": "United States", "region": "North America", "lat": 40.7128, "lng": -74.0060, "members": 260},
+        {"id": "IXP-202", "name": "Chicago", "country": "United States", "region": "North America", "lat": 41.8781, "lng": -87.6298, "members": 180},
+        {"id": "IXP-203", "name": "Los Angeles", "country": "United States", "region": "North America", "lat": 34.0522, "lng": -118.2437, "members": 200},
+        {"id": "IXP-204", "name": "San Jose", "country": "United States", "region": "North America", "lat": 37.3382, "lng": -121.8863, "members": 185},
+        {"id": "IXP-205", "name": "Toronto", "country": "Canada", "region": "North America", "lat": 43.6532, "lng": -79.3832, "members": 140},
+        {"id": "IXP-301", "name": "Singapore", "country": "Singapore", "region": "Asia Pacific", "lat": 1.3521, "lng": 103.8198, "members": 210},
+        {"id": "IXP-302", "name": "Tokyo", "country": "Japan", "region": "Asia Pacific", "lat": 35.6762, "lng": 139.6503, "members": 195},
+        {"id": "IXP-303", "name": "Hong Kong", "country": "Hong Kong", "region": "Asia Pacific", "lat": 22.3193, "lng": 114.1694, "members": 170},
+        {"id": "IXP-304", "name": "Seoul", "country": "South Korea", "region": "Asia Pacific", "lat": 37.5665, "lng": 126.9780, "members": 155},
+        {"id": "IXP-305", "name": "Mumbai", "country": "India", "region": "Asia Pacific", "lat": 19.0760, "lng": 72.8777, "members": 145},
+        {"id": "IXP-306", "name": "Chennai", "country": "India", "region": "Asia Pacific", "lat": 13.0827, "lng": 80.2707, "members": 105},
+        {"id": "IXP-307", "name": "Sydney", "country": "Australia", "region": "Asia Pacific", "lat": -33.8688, "lng": 151.2093, "members": 130},
+        {"id": "IXP-401", "name": "Dubai", "country": "United Arab Emirates", "region": "Middle East", "lat": 25.2048, "lng": 55.2708, "members": 160},
+        {"id": "IXP-501", "name": "Johannesburg", "country": "South Africa", "region": "Africa", "lat": -26.2041, "lng": 28.0473, "members": 130},
+        {"id": "IXP-502", "name": "Nairobi", "country": "Kenya", "region": "Africa", "lat": -1.2921, "lng": 36.8219, "members": 85},
+        {"id": "IXP-601", "name": "São Paulo", "country": "Brazil", "region": "South America", "lat": -23.5505, "lng": -46.6333, "members": 115},
+    ],
+    "facilities": [
+        {"id": "FAC-01", "facility_name": "Equinix LD8", "country": "United Kingdom", "region": "Europe", "operator": "Equinix", "connected_networks": 118, "capacity": 2400, "importance_score": 98, "lat": 51.5201, "lng": -0.1234},
+        {"id": "FAC-02", "facility_name": "Telehouse North", "country": "United Kingdom", "region": "Europe", "operator": "Digital Realty", "connected_networks": 94, "capacity": 1800, "importance_score": 92, "lat": 51.527, "lng": -0.074},
+        {"id": "FAC-03", "facility_name": "MDC NYC", "country": "United States", "region": "North America", "operator": "Digital Realty", "connected_networks": 141, "capacity": 2800, "importance_score": 96, "lat": 40.7359, "lng": -74.0037},
+        {"id": "FAC-04", "facility_name": "Google DC 1", "country": "United States", "region": "North America", "operator": "Google", "connected_networks": 104, "capacity": 3150, "importance_score": 95, "lat": 37.7749, "lng": -122.4194},
+        {"id": "FAC-05", "facility_name": "JINX Data Hub", "country": "South Africa", "region": "Africa", "operator": "NTT", "connected_networks": 52, "capacity": 1100, "importance_score": 77, "lat": -26.12, "lng": 28.03},
+        {"id": "FAC-06", "facility_name": "SIN-IX Core", "country": "Singapore", "region": "Asia Pacific", "operator": "LINX", "connected_networks": 96, "capacity": 2200, "importance_score": 91, "lat": 1.289, "lng": 103.851},
+    ],
+    "landing_stations": [
+        {"id": "LS-01", "name": "Bude Landing Station", "country": "United Kingdom", "region": "Europe", "lat": 50.8333, "lng": -4.55},
+        {"id": "LS-02", "name": "Virginia Beach Landing", "country": "United States", "region": "North America", "lat": 36.8528, "lng": -75.978},
+        {"id": "LS-03", "name": "Mumbai Landing Station", "country": "India", "region": "Asia Pacific", "lat": 19.076, "lng": 72.8777},
+    ],
+    "corridors": [
+        {
+            "id": "C-101",
+            "name": "London ↔ Frankfurt",
+            "from": "London",
+            "to": "Frankfurt",
+            "capacity_gbps": 480,
+            "congestion_score": 76,
+            "regional_dependency": "Europe",
+            "redundancy_score": 68,
+        },
+        {
+            "id": "C-106",
+            "name": "Indian Ocean Transit",
+            "from": "Singapore",
+            "to": "Johannesburg",
+            "capacity_gbps": 410,
+            "congestion_score": 67,
+            "regional_dependency": "Asia-Africa",
+            "redundancy_score": 73,
+        },
+            {
+            "id": "C-102",
+            "name": "London ↔ New York",
+            "from": "London",
+            "to": "New York",
+            "capacity_gbps": 430,
+            "congestion_score": 71,
+            "regional_dependency": "Atlantic",
+            "redundancy_score": 74,
+        },
+        {
+            "id": "C-103",
+            "name": "Frankfurt ↔ Singapore",
+            "from": "Frankfurt",
+            "to": "Singapore",
+            "capacity_gbps": 520,
+            "congestion_score": 82,
+            "regional_dependency": "Europe-Middle East",
+            "redundancy_score": 62,
+        },
+        {
+            "id": "C-105",
+            "name": "New York ↔ Singapore",
+            "from": "New York",
+            "to": "Singapore",
+            "capacity_gbps": 500,
+            "congestion_score": 75,
+            "regional_dependency": "Global",
+            "redundancy_score": 65,
+        },
+        {
+            "id": "C-104",
+            "name": "Frankfurt ↔ Dubai",
+            "from": "Frankfurt",
+            "to": "Dubai",
+            "capacity_gbps": 380,
+            "congestion_score": 69,
+            "regional_dependency": "Europe-Middle East",
+            "redundancy_score": 71,
+        },
+        {
+            "id": "C-107",
+            "name": "Dubai ↔ Singapore",
+            "from": "Dubai",
+            "to": "Singapore",
+            "capacity_gbps": 440,
+            "congestion_score": 73,
+            "regional_dependency": "Middle East-Asia",
+            "redundancy_score": 66,
+        },
+        {
+            "id": "C-108",
+            "name": "Dubai ↔ Mumbai",
+            "from": "Dubai",
+            "to": "Mumbai",
+            "capacity_gbps": 420,
+            "congestion_score": 66,
+            "regional_dependency": "Middle East-Asia",
+            "redundancy_score": 74,
+        },
+        {
+            "id": "C-109",
+            "name": "Mumbai ↔ Singapore",
+            "from": "Mumbai",
+            "to": "Singapore",
+            "capacity_gbps": 470,
+            "congestion_score": 68,
+            "regional_dependency": "Asia",
+            "redundancy_score": 76,
+        },
+        {
+            "id": "C-110",
+            "name": "Singapore ↔ Tokyo",
+            "from": "Singapore",
+            "to": "Tokyo",
+            "capacity_gbps": 610,
+            "congestion_score": 71,
+            "regional_dependency": "Asia-Pacific",
+            "redundancy_score": 81,
+        },
+        {
+            "id": "C-111",
+            "name": "Tokyo ↔ San Jose",
+            "from": "Tokyo",
+            "to": "San Jose",
+            "capacity_gbps": 760,
+            "congestion_score": 79,
+            "regional_dependency": "Pacific",
+            "redundancy_score": 69,
+        },
+        {
+            "id": "C-112",
+            "name": "San Jose ↔ Los Angeles",
+            "from": "San Jose",
+            "to": "Los Angeles",
+            "capacity_gbps": 540,
+            "congestion_score": 61,
+            "regional_dependency": "North America",
+            "redundancy_score": 83,
+        },
+        {
+            "id": "C-113",
+            "name": "Los Angeles ↔ New York",
+            "from": "Los Angeles",
+            "to": "New York",
+            "capacity_gbps": 690,
+            "congestion_score": 73,
+            "regional_dependency": "North America",
+            "redundancy_score": 72,
+        },
+        {
+            "id": "C-114",
+            "name": "Johannesburg ↔ Dubai",
+            "from": "Johannesburg",
+            "to": "Dubai",
+            "capacity_gbps": 360,
+            "congestion_score": 64,
+            "regional_dependency": "Africa-Middle East",
+            "redundancy_score": 77,
+        },
+        {
+            "id": "C-115",
+            "name": "Johannesburg ↔ Mumbai",
+            "from": "Johannesburg",
+            "to": "Mumbai",
+            "capacity_gbps": 350,
+            "congestion_score": 62,
+            "regional_dependency": "Africa-Asia",
+            "redundancy_score": 79,
+        },
+        {
+            "id": "C-116",
+            "name": "Marseille ↔ Frankfurt",
+            "from": "Marseille",
+            "to": "Frankfurt",
+            "capacity_gbps": 400,
+            "congestion_score": 57,
+            "regional_dependency": "Europe",
+            "redundancy_score": 82,
+        },
+        {
+            "id": "C-117",
+            "name": "Marseille ↔ Dubai",
+            "from": "Marseille",
+            "to": "Dubai",
+            "capacity_gbps": 410,
+            "congestion_score": 69,
+            "regional_dependency": "Europe-Middle East",
+            "redundancy_score": 74,
+        },
+        {
+            "id": "C-118",
+            "name": "Singapore ↔ Sydney",
+            "from": "Singapore",
+            "to": "Sydney",
+            "capacity_gbps": 530,
+            "congestion_score": 65,
+            "regional_dependency": "Asia-Pacific",
+            "redundancy_score": 80,
+        },
+        {
+            "id": "C-119",
+            "name": "Sydney ↔ Tokyo",
+            "from": "Sydney",
+            "to": "Tokyo",
+            "capacity_gbps": 460,
+            "congestion_score": 60,
+            "regional_dependency": "Pacific",
+            "redundancy_score": 84,
+        },
+        {
+            "id": "C-120",
+            "name": "London ↔ Marseille",
+            "from": "London",
+            "to": "Marseille",
+            "capacity_gbps": 390,
+            "congestion_score": 56,
+            "regional_dependency": "Europe",
+            "redundancy_score": 86,
+        },
+        {
+            "id": "C-121",
+            "name": "Frankfurt ↔ Mumbai",
+            "from": "Frankfurt",
+            "to": "Mumbai",
+            "capacity_gbps": 450,
+            "congestion_score": 70,
+            "regional_dependency": "Europe-Asia",
+            "redundancy_score": 73,
+        },
+        {
+            "id": "C-122",
+            "name": "Dubai ↔ Tokyo",
+            "from": "Dubai",
+            "to": "Tokyo",
+            "capacity_gbps": 520,
+            "congestion_score": 72,
+            "regional_dependency": "Middle East-Asia",
+            "redundancy_score": 71,
+        },
+    ],
+    "path_concentration": {
+        "most_critical": [
+            {"name": "Frankfurt ↔ Singapore", "congestion_score": 82, "regional_dependency": "High", "redundancy_score": 62},
+            {"name": "London ↔ New York", "congestion_score": 75, "regional_dependency": "Medium", "redundancy_score": 74},
+            {"name": "New York ↔ Singapore", "congestion_score": 88, "regional_dependency": "High", "redundancy_score": 58},
+        ],
+        "dependency_index": 7.4,
+        "redundancy_rating": 71,
+    },
+    "backbone": [
+        {"id": "LON-01", "name": "London Core", "region": "Europe", "capacity_gbps": 1200},
+        {"id": "FRA-02", "name": "Frankfurt Transit", "region": "Europe", "capacity_gbps": 980},
+        {"id": "JFK-03", "name": "New York Gateway", "region": "North America", "capacity_gbps": 1400},
+        {"id": "SJC-04", "name": "San Jose Edge", "region": "North America", "capacity_gbps": 890},
+        {"id": "DXB-05", "name": "Dubai Hub", "region": "Middle East", "capacity_gbps": 760},
+        {"id": "SIN-06", "name": "Singapore Exchange", "region": "Asia Pacific", "capacity_gbps": 1100},
+    ],
+    "links": [
+        {"from": "LON-01", "to": "FRA-02", "capacity_gbps": 480},
+        {"from": "FRA-02", "to": "DXB-05", "capacity_gbps": 380},
+        {"from": "DXB-05", "to": "SIN-06", "capacity_gbps": 440},
+        {"from": "SIN-06", "to": "JFK-03", "capacity_gbps": 520},
+        {"from": "JFK-03", "to": "SJC-04", "capacity_gbps": 360},
+        {"from": "LON-01", "to": "JFK-03", "capacity_gbps": 430},
+    ],
+}
+
+
+def get_network_dataset():
+    return NETWORK_DATASET
+
+
+def get_mock_route_simulation(ixp: str | None = None, facility: str | None = None, cable: str | None = None):
+    ixp_name = (ixp or "London").strip()
+    facility_name = (facility or "Equinix LD8").strip()
+    cable_name = (cable or "SEA-ME-WE-3").strip()
+    graph = NetworkGraph(
+        NETWORK_DATASET["backbone"],
+        NETWORK_DATASET["links"],
+    )
+
+    failed_map = {
+        "SEA-ME-WE-3": ("FRA-02", "DXB-05"),
+        "Atlantic Crossing": ("LON-01", "JFK-03"),
+        "Pacific Transit": ("SIN-06", "JFK-03"),
+        "Red Sea Link": ("FRA-02", "DXB-05"),
+    }
+
+    failed_edge = failed_map.get(cable_name, ("FRA-02", "DXB-05"))
+
+    simulation = graph.simulate_failure(failed_edge)
+
+    if simulation["route_available"]:
+        route_status = "rerouted"
+        affected_traffic = "420 Gbps"
+        congestion = 72
+        redundancy = 18
+    else:
+        route_status = "critical"
+        affected_traffic = "1.4 Tbps"
+        congestion = 94
+        redundancy = 47
+
+    return {
+        "status": route_status,
+        "selected_ixp": ixp_name,
+        "selected_facility": facility_name,
+        "selected_cable": cable_name,
+
+        "affected_traffic": affected_traffic,
+
+        "impacted_regions": [
+            "Europe",
+            "North America",
+            "Asia Pacific",
+        ],
+
+        "impacted_facilities": [
+            facility_name,
+            "Telehouse North",
+            "Google DC 1",
+        ],
+
+        "recalculated_paths": [
+            {
+                "route": " → ".join(simulation["original_path"])
+                if simulation["original_path"]
+                else "Unavailable",
+                "status": "failed",
+            },
+            {
+                "route": " → ".join(simulation["rerouted_path"])
+                if simulation["rerouted_path"]
+                else "No Alternative Route",
+                "status": route_status,
+            },
+        ],
+
+        "metrics": {
+            "new_congestion": congestion,
+            "redundancy_drop": redundancy,
+            "regional_impact": (
+                "Medium"
+                if simulation["route_available"]
+                else "Critical"
+            ),
+            "recovery_window_hours": (
+                2
+                if simulation["route_available"]
+                else 8
+            ),
+        },
+    }
+</file>
+
+<file path="backend/app/main.py">
+from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.adapters import load_network_data_adapter
+from app.data import (
+    get_network_dataset,
+)
+
+DATA_ADAPTER = load_network_data_adapter()
+DATASET = DATA_ADAPTER.get_dataset() or get_network_dataset()
+
+app = FastAPI(
+    title="Internet Backbone & IXP Map API",
+    version="0.1.0",
+    description="Operational visibility for backbone transit performance and IXP connectivity.",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/")
+def root():
+    return {
+        "name": "Internet Backbone & IXP Map",
+        "status": "running",
+        "description": "Real Rails Intelligence Library",
+        "version": "0.1.0",
+    }
+
+
+@app.get("/api/network/summary")
+def network_summary():
+    summary = DATASET["summary"]
+    return {
+        "backbone_nodes": summary["backbone_nodes"],
+        "ixp_sites": summary["ixp_sites"],
+        "regions": summary["regions"],
+        "total_capacity_gbps": summary["total_capacity_gbps"],
+        "active_links": summary["active_links"],
+        "peak_utilization_pct": summary["peak_utilization_pct"],
+    }
+
+
+@app.get("/api/network/topology")
+def network_topology():
+    return {
+        "regions": DATASET["regions"],
+        "backbone": DATASET["backbone"],
+        "ixps": DATASET["ixps"],
+        "links": DATASET["links"],
+        "landing_stations": DATASET["landing_stations"],
+        "corridors": DATASET["corridors"],
+    }
+
+
+@app.get("/api/network/facilities")
+def network_facilities():
+    return DATASET["facilities"]
+
+
+@app.get("/api/network/asns")
+def asn_index():
+    return DATASET["asns"]
+
+
+@app.get("/api/network/operators")
+def operator_index():
+    return DATASET["operators"]
+
+
+@app.get("/api/network/path-concentration")
+def path_concentration():
+    return DATASET["path_concentration"]
+
+
+@app.get("/api/network/filters")
+def network_filters():
+    return {
+        "regions": [region["name"] for region in DATASET["regions"]],
+        "operators": [operator["name"] for operator in DATASET["operators"]],
+        "ixps": [ixp["name"] for ixp in DATASET["ixps"]],
+    }
+
+
+@app.get("/api/network/route-simulation")
+def route_simulation(
+    ixp: str | None = Query(default=None, alias="ixp"),
+    facility: str | None = Query(default=None, alias="facility"),
+    cable: str | None = Query(default=None, alias="cable"),
+):
+    return DATA_ADAPTER.get_route_simulation(ixp=ixp, facility=facility, cable=cable)
+
+
+@app.get("/api/network/why-this-matters")
+def why_this_matters():
+    return {
+        "headline": "The internet is a shared operating system for the modern economy.",
+        "copy": [
+            "When a single exchange or cable corridor is interrupted, the impact spreads beyond one city or region. Traffic reroutes across broader transit systems, driving congestion and delay in markets that depend on digital commerce and cloud access.",
+            "This dashboard helps identify where internet infrastructure is concentrated, who owns the critical nodes, and which routes are most exposed to service disruption.",
+        ],
+    }
+
+
+@app.get("/api/network/who-controls-the-rail")
+def who_controls_the_rail():
+    return {
+        "summary": "A handful of operators control the majority of terrestrial and peering capacity behind global connectivity.",
+        "operators": DATASET["operators"],
+    }
+</file>
+
+<file path="backend/app/network_graph.py">
+from collections import defaultdict, deque
+from copy import deepcopy
+
+
+class NetworkGraph:
+    def __init__(self, nodes, links):
+        self.nodes = {node["id"]: node for node in nodes}
+        self.original_links = deepcopy(links)
+
+    def _build_graph(self, failed_edge=None):
+        graph = defaultdict(list)
+
+        for edge in self.original_links:
+            a = edge["from"]
+            b = edge["to"]
+
+            if failed_edge:
+                if (
+                    (a == failed_edge[0] and b == failed_edge[1])
+                    or (a == failed_edge[1] and b == failed_edge[0])
+                ):
+                    continue
+
+            graph[a].append(b)
+            graph[b].append(a)
+
+        return graph
+
+    def shortest_path(self, start, end, failed_edge=None):
+        graph = self._build_graph(failed_edge)
+
+        queue = deque([[start]])
+        visited = {start}
+
+        while queue:
+            path = queue.popleft()
+            node = path[-1]
+
+            if node == end:
+                return path
+
+            for nxt in graph[node]:
+                if nxt not in visited:
+                    visited.add(nxt)
+                    queue.append(path + [nxt])
+
+        return None
+
+    def simulate_failure(self, failed_edge):
+        start = failed_edge[0]
+        end = failed_edge[1]
+
+        original = self.shortest_path(start, end)
+
+        rerouted = self.shortest_path(
+            start,
+            end,
+            failed_edge=failed_edge,
+        )
+
+        return {
+            "failed_link": {
+                "from": start,
+                "to": end,
+            },
+            "original_path": original,
+            "rerouted_path": rerouted,
+            "route_available": rerouted is not None,
+        }
+</file>
+
+<file path="backend/.env.example">
+
+</file>
+
+<file path="backend/.gitignore">
+venv/
+__pycache__/
+.env
+</file>
+
+<file path="backend/requirements.txt">
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.14.2
+certifi==2026.7.22
+click==8.4.2
+colorama==0.4.6
+fastapi==0.141.1
+geopandas==1.1.4
+h11==0.16.0
+idna==3.18
+numpy==2.5.1
+packaging==26.2
+pandas==3.0.5
+pydantic==2.13.4
+pydantic_core==2.46.4
+pyogrio==0.13.0
+pyproj==3.7.2
+python-dateutil==2.9.0.post0
+shapely==2.1.2
+six==1.17.0
+starlette==1.3.1
+typing-inspection==0.4.2
+typing_extensions==4.16.0
+tzdata==2026.3
+uvicorn==0.52.0
+</file>
+
+<file path="backend/test_main.py">
+import unittest
+
+from fastapi.testclient import TestClient
+
+from app.main import app
+
+
+class NetworkApiTests(unittest.TestCase):
+    def setUp(self):
+        self.client = TestClient(app)
+
+    def test_root_endpoint_reports_project_status(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("Internet Backbone & IXP Map", payload.get("name", ""))
+        self.assertEqual(payload.get("status"), "running")
+
+    def test_summary_endpoint_returns_network_metrics(self):
+        response = self.client.get("/api/network/summary")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertGreater(payload.get("backbone_nodes", 0), 0)
+        self.assertGreater(payload.get("ixp_sites", 0), 0)
+        self.assertGreater(payload.get("regions", 0), 0)
+
+    def test_facilities_endpoint_returns_cards(self):
+        response = self.client.get("/api/network/facilities")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertGreater(len(payload), 0)
+        first = payload[0]
+        self.assertIn("facility_name", first)
+        self.assertIn("country", first)
+        self.assertIn("operator", first)
+        self.assertIn("connected_networks", first)
+        self.assertIn("capacity", first)
+        self.assertIn("importance_score", first)
+
+    def test_simulation_endpoint_returns_impacted_metrics(self):
+        response = self.client.get(
+            "/api/network/route-simulation?ixp=London&facility=Equinix LD8&cable=SEA-ME-WE-3"
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("affected_traffic", payload)
+        self.assertIn("impacted_facilities", payload)
+        self.assertIn("status", payload)
+
+
+if __name__ == "__main__":
+    unittest.main()
+</file>
+
+<file path="frontend/app/globals.css">
+@import "tailwindcss";
+
+:root {
+  --background: #030712;
+  --foreground: #e2e8f0;
+  --panel: #0b1117;
+  --panel-border: rgba(129, 140, 248, 0.18);
+  --accent: #38bdf8;
+  --accent-strong: #818cf8;
+  --muted: #94a3b8;
+  --surface-alt: rgba(15, 23, 42, 0.9);
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--background);
+}
+
+body {
+  margin: 0;
+  background: linear-gradient(180deg, #030712 0%, #07101a 100%);
+  color: var(--foreground);
+  font-family: "Inter", "Geist", Arial, Helvetica, sans-serif;
+}
+
+.leaflet-container {
+  background: #050816;
+}
+
+.leaflet-map-shell {
+  width: 100%;
+  height: 100%;
+  min-height: 500px;
+}
+
+button,
+select {
+  font: inherit;
+}
+
+.page-shell {
+  max-width: 1460px;
+  margin: 0 auto;
+  padding: 28px 24px 64px;
+}
+
+.hero-panel,
+.metric-card,
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(2, 6, 23, 0.6);
+}
+
+.hero-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 28px 32px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.hero-panel h1 {
+  margin: 0;
+  font-size: clamp(2.4rem, 4vw, 4rem);
+  line-height: 1.02;
+  letter-spacing: -0.06em;
+}
+
+.subtitle {
+  max-width: 760px;
+  margin: 14px 0 0;
+  font-size: 1.02rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.32);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 24px;
+}
+
+.metric-card {
+  padding: 20px 22px;
+}
+
+.metric-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.74rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.metric-card strong {
+  display: block;
+  margin-top: 10px;
+  font-size: clamp(1.7rem, 2vw, 2.3rem);
+  letter-spacing: -0.05em;
+}
+
+.main-layout {
+  display: grid;
+  grid-template-columns: 70% 30%;
+  gap: 20px;
+  margin-top: 24px;
+}
+
+.panel {
+  padding: 20px 18px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.panel-header h2,
+.sidebar-section h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: -0.03em;
+}
+
+.panel-header span {
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.real-map {
+  position: relative;
+  width: 100%;
+  height: 500px;
+  border-radius: 22px;
+  overflow: hidden;
+  border: 1px solid rgba(129, 140, 248, 0.15);
+  background:
+    radial-gradient(circle at center, rgba(56, 189, 248, 0.1), rgba(56, 189, 248, 0.02) 35%, transparent 60%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(11, 17, 23, 0.95));
+}
+
+.corridor-route {
+  cursor: pointer;
+  animation: corridor-drift 14s linear infinite;
+  stroke-linecap: round;
+}
+
+.corridor-route--selected {
+  animation-duration: 8s;
+  filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.5));
+}
+
+.corridor-route--hovered {
+  animation-duration: 6s;
+  filter: drop-shadow(0 0 14px rgba(251, 191, 36, 0.55));
+}
+
+.corridor-route--failed {
+  animation-duration: 20s;
+  filter: drop-shadow(0 0 14px rgba(248, 113, 113, 0.65));
+}
+
+.corridor-route--rerouted {
+  animation: corridor-reroute-glow 2.2s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 14px rgba(34, 197, 94, 0.85));
+}
+
+.corridor-status-label {
+  background: transparent !important;
+  border: none !important;
+}
+
+.corridor-status-label span {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.corridor-status-label--failed span {
+  background: rgba(239, 68, 68, 0.92);
+  color: #fff;
+  border: 1px solid rgba(248, 113, 113, 0.8);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.55);
+}
+
+.corridor-status-label--backup span {
+  background: rgba(34, 197, 94, 0.92);
+  color: #fff;
+  border: 1px solid rgba(74, 222, 128, 0.8);
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.55);
+}
+
+@keyframes corridor-reroute-glow {
+  from {
+    filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.55));
+  }
+
+  to {
+    filter: drop-shadow(0 0 20px rgba(34, 197, 94, 0.95));
+  }
+}
+
+.ixp-marker {
+  filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.85));
+}
+
+.ixp-marker--selected {
+  filter: drop-shadow(0 0 18px rgba(251, 191, 36, 0.95));
+}
+
+.facility-marker {
+  filter: drop-shadow(0 0 8px rgba(129, 140, 248, 0.65));
+}
+
+.facility-marker--selected {
+  filter: drop-shadow(0 0 14px rgba(251, 191, 36, 0.75));
+}
+
+.map-marker-tooltip,
+.route-tooltip-content {
+  display: grid;
+  gap: 2px;
+}
+
+.route-tooltip-content span {
+  font-size: 0.75rem;
+  color: #cbd5e1;
+}
+
+.corridor-action-button {
+  margin-top: 12px;
+  width: 100%;
+}
+
+@keyframes corridor-drift {
+  from {
+    stroke-dashoffset: 0;
+  }
+
+  to {
+    stroke-dashoffset: -120;
+  }
+}
+
+.map-globe {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+    radial-gradient(circle at 50% 35%, rgba(56, 189, 248, 0.12), transparent 38%);
+  background-size: 42px 42px, 42px 42px, 100% 100%;
+  opacity: 0.9;
+}
+
+.map-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 2px solid rgba(15, 23, 42, 0.7);
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.78);
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  cursor: pointer;
+}
+
+.map-marker span {
+  font-size: 0.45rem;
+  font-weight: 800;
+  color: #03111e;
+}
+
+.map-marker.ixp {
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(135deg, #7dd3fc, #38bdf8);
+}
+
+.map-marker.facility {
+  width: 12px;
+  height: 12px;
+  background: linear-gradient(135deg, #a5b4fc, #818cf8);
+}
+
+.map-marker.cable-landing {
+  background: linear-gradient(135deg, #34d399, #10b981);
+}
+
+.mini-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.mini-stat {
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(148, 163, 184, 0.04);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.mini-stat span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.mini-stat strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 1.05rem;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.sidebar-section {
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+}
+
+.sidebar-section:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.sidebar-section p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.sidebar-kpis {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.sidebar-kpis div {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(129, 140, 248, 0.04);
+  border: 1px solid rgba(129, 140, 248, 0.12);
+}
+
+.sidebar-kpis span {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.sidebar-kpis strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 1.1rem;
+}
+
+.operator-list,
+.owner-list,
+.recalculated-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.operator-list li,
+.owner-list li,
+.recalculated-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(148, 163, 184, 0.04);
+  border: 1px solid rgba(148, 163, 184, 0.09);
+}
+
+.operator-list strong,
+.owner-list strong,
+.recalculated-list span {
+  display: block;
+  font-size: 0.9rem;
+}
+
+.operator-list span,
+.owner-list span,
+.recalculated-list em {
+  color: var(--accent);
+  font-style: normal;
+  font-weight: 700;
+}
+
+.filter-list,
+.simulation-controls {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.filter-list label,
+.simulation-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-list span,
+.simulation-controls span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.filter-list select,
+.simulation-controls select {
+  width: 100%;
+  height: 42px;
+  padding: 0 14px;
+
+  appearance: none;
+  outline: none;
+
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--foreground);
+
+  font-size: 0.9rem;
+  font-weight: 500;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.filter-list select:hover,
+.simulation-controls select:hover {
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+.filter-list select:focus,
+.simulation-controls select:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+}
+
+.filter-list option,
+.simulation-controls option {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+.download-button {
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(129, 140, 248, 0.15));
+  color: var(--foreground);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bottom-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 20px;
+  margin-top: 24px;
+}
+
+.facility-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.facility-card {
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(148, 163, 184, 0.04);
+  border: 1px solid rgba(148, 163, 184, 0.09);
+}
+
+.facility-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.facility-header strong {
+  font-size: 0.98rem;
+}
+
+.facility-header span {
+  color: var(--accent);
+  font-size: 0.75rem;
+}
+
+.facility-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+  margin-top: 14px;
+}
+
+.facility-meta label {
+  display: block;
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.facility-meta p {
+  margin: 5px 0 0;
+  font-weight: 700;
+}
+
+.concentration-list {
+  display: grid;
+  gap: 12px;
+}
+
+.concentration-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(80px, 0.7fr));
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(148, 163, 184, 0.04);
+  border: 1px solid rgba(148, 163, 184, 0.08);
+}
+
+.concentration-item strong {
+  display: block;
+}
+
+.concentration-item small {
+  color: var(--muted);
+}
+
+.concentration-score {
+  text-align: center;
+}
+
+.concentration-score span {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.concentration-score small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.impact-box {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.impact-box div {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(56, 189, 248, 0.05);
+  border: 1px solid rgba(56, 189, 248, 0.12);
+}
+
+.impact-box span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.impact-box strong {
+  display: block;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+.simulation-grid {
+  margin-bottom: 8px;
+}
+
+@media (max-width: 950px) {
+  .main-layout,
+  .bottom-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .page-shell {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .hero-panel {
+    display: grid;
+    gap: 18px;
+    padding: 22px 18px;
+  }
+
+  .metrics-grid,
+  .facility-grid,
+  .impact-box,
+  .mini-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .concentration-item {
+    grid-template-columns: 1fr;
+  }
+}
+</file>
+
+<file path="frontend/app/layout.tsx">
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "leaflet/dist/leaflet.css";
+import "./globals.css";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+export const metadata: Metadata = {
+  title: "Internet Backbone & IXP Map",
+  description:
+    "Real Rails Intelligence Library dashboard for global Internet backbone and IXP monitoring.",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable}`}
+    >
+      <body className="bg-[#030712] text-white overflow-x-hidden">
+        {children}
+      </body>
+    </html>
+  );
+}
+</file>
+
+<file path="frontend/app/MapView.tsx">
+// @ts-nocheck
+"use client";
+
+import React, { useEffect, useState, useMemo, useCallback } from "react";
+import { CircleMarker, MapContainer, Marker, Polyline, TileLayer, Tooltip } from "react-leaflet";
+import { useMap } from "react-leaflet";
+import L from "leaflet";
+
+const MapContainerAny: any = MapContainer;
+const TileLayerAny: any = TileLayer;
+const PolylineAny: any = Polyline;
+const CircleMarkerAny: any = CircleMarker;
+const TooltipAny: any = Tooltip;
+const MarkerAny: any = Marker;
+
+function MapInvalidator() {
+  const map = useMap();
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      map.invalidateSize();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [map]);
+
+  return null;
+}
+
+const routeAnchors: Record<string, [number, number]> = {
+  London: [51.5074, -0.1278],
+  Frankfurt: [50.1109, 8.6821],
+  "New York": [40.7128, -74.006],
+  Singapore: [1.3521, 103.8198],
+  Dubai: [25.2048, 55.2708],
+  Johannesburg: [-26.2041, 28.0473],
+  "San Jose": [37.3382, -121.8863],
+  Tokyo: [35.6762, 139.6503],
+  Mumbai: [19.0760, 72.8777],
+  Marseille: [43.2965, 5.3698],
+  Sydney: [33.8688, 151.2093],
+  "Los Angeles": [34.0522, -118.2437],
+};
+
+const getMidpoint = (positions: [number, number][]): [number, number] => [
+  (positions[0][0] + positions[1][0]) / 2,
+  (positions[0][1] + positions[1][1]) / 2,
+];
+
+const failedLabelIcon = L.divIcon({
+  className: "corridor-status-label corridor-status-label--failed",
+  html: "<span>FAILED</span>",
+  iconSize: [64, 22],
+  iconAnchor: [32, 11],
+});
+
+const backupLabelIcon = L.divIcon({
+  className: "corridor-status-label corridor-status-label--backup",
+  html: "<span>BACKUP</span>",
+  iconSize: [72, 22],
+  iconAnchor: [36, 11],
+});
+
+// Icon helper for permanent place name labels
+const createCityLabelIcon = (cityName: string) =>
+  L.divIcon({
+    className: "city-name-label",
+    html: `<span style="color: #e2e8f0; font-weight: 600; font-size: 11px; text-shadow: 0 1px 3px rgba(0,0,0,0.9); background: rgba(15, 23, 42, 0.85); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.15); white-space: nowrap;">${cityName}</span>`,
+    iconSize: [100, 20],
+    iconAnchor: [-10, 10], // Offsets the text slightly to the right of the anchor node
+  });
+
+const getRiskLevel = (route: any) => {
+  if (route.congestion_score >= 80 || route.redundancy_score <= 60) return "Critical";
+  if (route.congestion_score >= 70 || route.redundancy_score <= 70) return "High";
+  if (route.congestion_score >= 50) return "Moderate";
+  return "Low";
+};
+
+const matchesRoute = (targetState: any, routeName: string) => {
+  if (!targetState) return false;
+  if (Array.isArray(targetState)) return targetState.includes(routeName);
+  return targetState === routeName;
+};
+
+const getRouteStyle = (route: any, simulation: any, hoveredRouteId: string | null) => {
+  const isFailed = matchesRoute(simulation.failed_route, route.name);
+  const isRerouted = matchesRoute(simulation.rerouted_route, route.name);
+  const isSelected = matchesRoute(simulation.selected_cable, route.name);
+  const isHovered = hoveredRouteId === route.id;
+
+  if (isFailed) {
+    return {
+      className: "corridor-route corridor-route--failed",
+      color: "#ef4444",
+      weight: 5,
+      opacity: 0.35,
+      dashArray: "8 12",
+      lineCap: "round",
+    };
+  }
+
+  if (isRerouted) {
+    return {
+      className: "corridor-route corridor-route--rerouted",
+      color: "#22c55e",
+      weight: 7,
+      opacity: 1,
+      dashArray: undefined,
+      lineCap: "round",
+    };
+  }
+
+  if (isSelected) {
+    return {
+      className: "corridor-route corridor-route--selected",
+      color: "#38bdf8",
+      weight: 4,
+      opacity: 1,
+      dashArray: "12 10",
+      lineCap: "round",
+    };
+  }
+
+  if (isHovered) {
+    return {
+      className: "corridor-route corridor-route--hovered",
+      color: "#fbbf24",
+      weight: 4,
+      opacity: 0.9,
+      dashArray: "16 14",
+      lineCap: "round",
+    };
+  }
+
+  return {
+    className: "corridor-route",
+    color: "#818cf8",
+    weight: 3,
+    opacity: 0.82,
+    dashArray: "16 14",
+    lineCap: "round",
+  };
+};
+
+type MapViewProps = {
+  topology: any;
+  facilities: any[];
+  simulation: any;
+  setSimulation: any;
+  filters: any;
+  setFilters: any;
+  mapFilters: any;
+  setMapFilters: any;
+  pathConcentration: any;
+};
+
+export default function MapView({
+  topology,
+  facilities,
+  simulation,
+  setSimulation,
+  filters,
+  setFilters,
+  mapFilters,
+  setMapFilters,
+  pathConcentration,
+}: MapViewProps) {
+  const [hoveredRouteId, setHoveredRouteId] = useState<string | null>(null);
+
+  const mapRoutes = useMemo(() => {
+    return topology.corridors
+      .map((corridor: any) => {
+        const fromPos = routeAnchors[corridor.from?.trim()];
+        const toPos = routeAnchors[corridor.to?.trim()];
+        
+        const resolvedPositions = (fromPos && toPos) ? [fromPos, toPos] : [];
+
+        return {
+          id: corridor.id,
+          name: corridor.name,
+          from: corridor.from || "Unknown",
+          to: corridor.to || "Unknown",
+          capacity_gbps: corridor.capacity_gbps,
+          congestion_score: corridor.congestion_score,
+          regional_dependency: corridor.regional_dependency,
+          redundancy_score: corridor.redundancy_score,
+          positions: resolvedPositions,
+        };
+      })
+      .filter((route: any) => route.positions.length === 2);
+  }, [topology.corridors]);
+
+  const onRouteClick = useCallback((routeName: string) => {
+    setSimulation((prev: any) => ({
+      ...prev,
+      selected_cable: routeName,
+      failed_route: undefined,
+      rerouted_route: undefined,
+      status: "degraded",
+    }));
+  }, [setSimulation]);
+
+  const onRouteMouseOver = useCallback((routeId: string) => setHoveredRouteId(routeId), []);
+  const onRouteMouseOut = useCallback((routeId: string) => {
+    setHoveredRouteId((currentId) => (currentId === routeId ? null : currentId));
+  }, []);
+
+  const onIxpClick = useCallback((ixp: any) => {
+    setSimulation((prev: any) => ({
+      ...prev,
+      selected_ixp: ixp.name,
+      selected_facility: "",
+    }));
+
+    setFilters((prev: any) => ({
+      ...prev,
+      ixp: ixp.name,
+    }));
+
+    setMapFilters((prev: any) => ({
+      ...prev,
+      region: ixp.region,
+      facility: "All facilities",
+    }));
+  }, [setSimulation, setFilters, setMapFilters]);
+
+  const onFacilityClick = useCallback((facility: any) => {
+    setSimulation((prev: any) => ({
+      ...prev,
+      selected_facility: facility.facility_name,
+      selected_ixp: "",
+    }));
+
+    setMapFilters((prev: any) => ({
+      ...prev,
+      facility: facility.facility_name,
+      region: facility.region,
+    }));
+
+    setFilters((prev: any) => ({
+      ...prev,
+      ixp: "All IXPs",
+    }));
+  }, [setSimulation, setMapFilters, setFilters]);
+
+  const renderedRoutes = useMemo(() => {
+    return mapRoutes.map((route) => (
+      <PolylineAny
+        key={route.id}
+        positions={route.positions}
+        eventHandlers={{
+          click: () => onRouteClick(route.name),
+          mouseover: () => onRouteMouseOver(route.id),
+          mouseout: () => onRouteMouseOut(route.id),
+        }}
+        pathOptions={getRouteStyle(route, simulation, hoveredRouteId)}
+      >
+        <TooltipAny direction="top" sticky interactive={false} opacity={0.95} className="route-tooltip">
+          <div className="map-marker-tooltip route-tooltip-content" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <strong style={{ fontSize: '1.1em', borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '4px' }}>{route.name}</strong>
+            {matchesRoute(simulation.failed_route, route.name) && (
+              <span style={{ color: '#f87171', fontWeight: 700, fontSize: '0.75rem' }}>STATUS: FAILED</span>
+            )}
+            {matchesRoute(simulation.rerouted_route, route.name) && (
+              <span style={{ color: '#4ade80', fontWeight: 700, fontSize: '0.75rem' }}>STATUS: BACKUP ROUTE</span>
+            )}
+            <span>{route.from} to {route.to}</span>
+            <span><strong>Capacity:</strong> {route.capacity_gbps} Gbps</span>
+            <span><strong>Traffic utilization:</strong> {route.congestion_score}%</span>
+            <span><strong>Risk level:</strong> {getRiskLevel(route)}</span>
+          </div>
+        </TooltipAny>
+      </PolylineAny>
+    ));
+  }, [mapRoutes, simulation.selected_cable, simulation.failed_route, simulation.rerouted_route, hoveredRouteId, onRouteClick, onRouteMouseOver, onRouteMouseOut]);
+
+  const routeStatusLabels = useMemo(() => {
+    return mapRoutes.flatMap((route) => {
+      const isFailed = matchesRoute(simulation.failed_route, route.name);
+      const isRerouted = matchesRoute(simulation.rerouted_route, route.name);
+
+      if (!isFailed && !isRerouted) {
+        return [];
+      }
+
+      const midpoint = getMidpoint(route.positions as [number, number][]);
+
+      return [
+        <MarkerAny
+          key={`${route.id}-status-label`}
+          position={midpoint}
+          icon={isFailed ? failedLabelIcon : backupLabelIcon}
+          interactive={false}
+          zIndexOffset={1000}
+        />,
+      ];
+    });
+  }, [mapRoutes, simulation.failed_route, simulation.rerouted_route]);
+
+  const renderedCityLabels = useMemo(() => {
+    return Object.entries(routeAnchors).map(([cityName, coords]) => (
+      <MarkerAny
+        key={`city-label-${cityName}`}
+        position={coords}
+        icon={createCityLabelIcon(cityName)}
+        interactive={false}
+        zIndexOffset={500}
+      />
+    ));
+  }, []);
+
+  const renderedIXPs = useMemo(() => {
+    return topology.ixps.map((ixp: any) => {
+      const isSelected = simulation.selected_ixp === ixp.name;
+      return (
+        <CircleMarker
+          key={ixp.id}
+          center={[ixp.lat, ixp.lng]}
+          radius={isSelected ? 10 : 8}
+          pathOptions={{
+            className: isSelected ? "ixp-marker ixp-marker--selected" : "ixp-marker",
+            color: isSelected ? "#fbbf24" : "#38bdf8",
+            fillColor: "#38bdf8",
+            fillOpacity: 0.95,
+            weight: isSelected ? 3 : 2,
+          }}
+          eventHandlers={{
+            click: () => onIxpClick(ixp),
+          }}
+        >
+          <Tooltip direction="top" offset={[0, -8]} opacity={0.95} interactive={false}>
+            <div className="map-marker-tooltip" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <strong style={{ fontSize: '1.1em', borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '4px' }}>{ixp.name}</strong>
+              <span>{ixp.region}</span>
+              <span><strong>Capacity:</strong> {ixp.members * 2.5} Gbps</span>
+              <span><strong>Connected ASNs:</strong> {ixp.members}</span>
+            </div>
+          </Tooltip>
+        </CircleMarker>
+      );
+    });
+  }, [topology.ixps, simulation.selected_ixp, onIxpClick]);
+
+  const renderedFacilities = useMemo(() => {
+    return facilities.map((facility: any) => {
+      const isSelected = simulation.selected_facility === facility.facility_name;
+      return (
+        <CircleMarker
+          key={facility.id}
+          center={[facility.lat, facility.lng]}
+          radius={isSelected ? 8 : 6}
+          pathOptions={{
+            className: isSelected ? "facility-marker facility-marker--selected" : "facility-marker",
+            color: isSelected ? "#fbbf24" : "#818cf8",
+            fillColor: "#818cf8",
+            fillOpacity: 0.95,
+            weight: isSelected ? 3 : 2,
+          }}
+          eventHandlers={{
+            click: () => onFacilityClick(facility),
+          }}
+        >
+          <Tooltip direction="top" offset={[0, -8]} opacity={0.95} interactive={false}>
+            <div className="map-marker-tooltip" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <strong style={{ fontSize: '1.1em', borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '4px' }}>{facility.facility_name}</strong>
+              <span>{facility.region}</span>
+              <span><strong>Capacity:</strong> {facility.capacity} Gbps</span>
+              <span><strong>Connected ASNs:</strong> {facility.connected_networks}</span>
+            </div>
+          </Tooltip>
+        </CircleMarker>
+      );
+    });
+  }, [facilities, simulation.selected_facility, onFacilityClick]);
+
+  const renderedStations = useMemo(() => {
+    return topology.landing_stations.map((station: any) => (
+      <CircleMarker
+        key={station.id}
+        center={[station.lat, station.lng]}
+        radius={5}
+        pathOptions={{
+          color: "#34d399",
+          fillColor: "#34d399",
+          fillOpacity: 0.9,
+          weight: 2,
+        }}
+      >
+        <Tooltip direction="top" offset={[0, -8]} opacity={0.95} interactive={false}>
+          <div className="map-marker-tooltip" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <strong style={{ fontSize: '1.1em' }}>{station.name}</strong>
+            <span>{station.region}</span>
+          </div>
+        </Tooltip>
+      </CircleMarker>
+    ));
+  }, [topology.landing_stations]);
+
+  return (
+    <>
+      <div className="map-filters">
+        <label className="map-filter">
+          <span>Region: </span>
+          <select
+            value={mapFilters.region}
+            onChange={(event) =>
+              setMapFilters((prev: any) => ({
+                ...prev,
+                region: event.target.value,
+              }))
+            }
+          >
+            <option>All Regions</option>
+            {topology.regions.map((region: any) => (
+              <option key={region.name} value={region.name}>
+                {region.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="map-filter">
+          <span>  ASN: </span>
+          <select
+            value={mapFilters.asn}
+            onChange={(event) =>
+              setMapFilters((prev: any) => ({
+                ...prev,
+                asn: event.target.value,
+              }))
+            }
+          >
+            <option>All ASNs</option>
+            <option>3356</option>
+            <option>1299</option>
+            <option>6939</option>
+            <option>15169</option>
+          </select>
+        </label>
+
+        <label className="map-filter">
+          <span>  Facility: </span>
+          <select
+            value={mapFilters.facility}
+            onChange={(event) => {
+              setMapFilters((prev: any) => ({
+                ...prev,
+                facility: event.target.value,
+              }));
+
+              if (event.target.value !== "All facilities") {
+                setSimulation((prev: any) => ({
+                  ...prev,
+                  selected_facility: event.target.value,
+                }));
+              }
+            }}
+          >
+            <option>All Facilities</option>
+            {facilities.map((facility: any) => (
+              <option
+                key={facility.id}
+                value={facility.facility_name}
+              >
+                {facility.facility_name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="map-filter">
+          <span>  Capacity: </span>
+          <select
+            value={mapFilters.capacity}
+            onChange={(event) =>
+              setMapFilters((prev: any) => ({
+                ...prev,
+                capacity: event.target.value,
+              }))
+            }
+          >
+            <option>All Capacities</option>
+            <option>500 Gbps+</option>
+            <option>1000 Gbps+</option>
+            <option>2000 Gbps+</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="real-map" aria-label="Interconnection map">
+        <MapContainerAny 
+          center={[18, 12]} 
+          zoom={2} 
+          minZoom={2} 
+          maxZoom={6} 
+          scrollWheelZoom={false} 
+          className="leaflet-map-shell" 
+          style={{ height: "100%", width: "100%" }}
+        >
+          <MapInvalidator />
+          <TileLayerAny
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          {renderedRoutes}
+          {routeStatusLabels}
+          {renderedCityLabels}
+          {renderedIXPs}
+          {renderedFacilities}
+          {renderedStations}
+        </MapContainerAny>
+      </div>
+
+      <div className="mini-stats-grid">
+        <div className="mini-stat">
+          <span>Critical corridor</span>
+          <strong>{pathConcentration.most_critical[0]?.name ?? "SEA-ME-WE-3"}</strong>
+        </div>
+        <div className="mini-stat">
+          <span>Dependency index</span>
+          <strong>{pathConcentration.dependency_index.toFixed(1)}</strong>
+        </div>
+        <div className="mini-stat">
+          <span>Redundancy</span>
+          <strong>{pathConcentration.redundancy_rating}%</strong>
+        </div>
+      </div>
+    </>
+  );
+}
+</file>
+
+<file path="frontend/app/network-types.ts">
+export type Summary = {
+  backbone_nodes: number;
+  ixp_sites: number;
+  regions: number;
+  total_capacity_gbps: number;
+  active_links: number;
+  peak_utilization_pct: number;
+};
+
+export type Region = {
+  name: string;
+  nodes: number;
+  traffic_index: number;
+  dependency?: string;
+};
+
+export type BackboneNode = {
+  id: string;
+  name: string;
+  region: string;
+  capacity_gbps: number;
+};
+
+export type IxpSite = {
+  id: string;
+  name: string;
+  country: string;
+  region: string;
+  members: number;
+  lat: number;
+  lng: number;
+};
+
+export type LandingStation = {
+  id: string;
+  name: string;
+  country: string;
+  region: string;
+  lat: number;
+  lng: number;
+};
+
+export type Corridor = {
+  id: string;
+  name: string;
+  from: string;
+  to: string;
+  capacity_gbps: number;
+  congestion_score: number;
+  regional_dependency: string;
+  redundancy_score: number;
+};
+
+export type NetworkTopology = {
+  regions: Region[];
+  backbone: BackboneNode[];
+  ixps: IxpSite[];
+  landing_stations: LandingStation[];
+  corridors: Corridor[];
+  links: Array<{ from: string; to: string; capacity_gbps: number }>;
+};
+
+export type Facility = {
+  id: string;
+  facility_name: string;
+  country: string;
+  region: string;
+  operator: string;
+  connected_networks: number;
+  capacity: number;
+  importance_score: number;
+  lat: number;
+  lng: number;
+};
+
+export type Operator = {
+  name: string;
+  ownership: string;
+  influence: string;
+};
+
+export type PathConcentration = {
+  most_critical: Array<{
+    name: string;
+    congestion_score: number;
+    regional_dependency: string;
+    redundancy_score: number;
+  }>;
+  dependency_index: number;
+  redundancy_rating: number;
+};
+
+export type SimulationResult = {
+  status: string;
+  selected_ixp: string;
+  selected_facility: string;
+  selected_cable: string;
+  failed_route?: string;
+  rerouted_route?: string;
+  affected_traffic: string;
+  impacted_regions: string[];
+  impacted_facilities: string[];
+  recalculated_paths: Array<{ route: string; status: string }>;
+  metrics: {
+    new_congestion: number;
+    redundancy_drop: number;
+    regional_impact: string;
+    recovery_window_hours: number;
+  };
+};
+
+export type NetworkFilters = {
+  region: string;
+  operator: string;
+  ixp: string;
+};
+
+export type MapFilters = {
+  region: string;
+  asn: string;
+  facility: string;
+  capacity: string;
+};
+
+export type WhyThisMatters = {
+  headline: string;
+  copy: string[];
+};
+</file>
+
+<file path="frontend/app/page.tsx">
+// @ts-nocheck
+"use client";
+
+import dynamic from "next/dynamic";
+import { useEffect, useMemo, useState } from "react";
+
+const MapView = dynamic(() => import("./MapView"), { ssr: false });
+
+type Summary = {
+  backbone_nodes: number;
+  ixp_sites: number;
+  regions: number;
+  total_capacity_gbps: number;
+  active_links: number;
+  peak_utilization_pct: number;
+};
+
+type Region = {
+  name: string;
+  nodes: number;
+  traffic_index: number;
+  dependency?: string;
+};
+
+type Node = {
+  id: string;
+  name: string;
+  region: string;
+  capacity_gbps: number;
+};
+
+type IxpSite = {
+  id: string;
+  name: string;
+  country: string;
+  region: string;
+  members: number;
+  lat: number;
+  lng: number;
+};
+
+type Facility = {
+  id: string;
+  facility_name: string;
+  country: string;
+  region: string;
+  operator: string;
+  connected_networks: number;
+  capacity: number;
+  importance_score: number;
+  lat: number;
+  lng: number;
+};
+
+type Operator = {
+  name: string;
+  ownership: string;
+  influence: string;
+};
+
+type PathConcentration = {
+  most_critical: Array<{
+    name: string;
+    congestion_score: number;
+    regional_dependency: string;
+    redundancy_score: number;
+  }>;
+  dependency_index: number;
+  redundancy_rating: number;
+};
+
+type SimulationResult = {
+  status: string;
+  selected_ixp: string;
+  selected_facility: string;
+  selected_cable: string;
+  failed_route?: string;
+  rerouted_route?: string;
+  affected_traffic: string;
+  impacted_regions: string[];
+  impacted_facilities: string[];
+  recalculated_paths: Array<{ route: string; status: string }>;
+  metrics: {
+    new_congestion: number;
+    redundancy_drop: number;
+    regional_impact: string;
+    recovery_window_hours: number;
+  };
+};
+
+const defaultSummary: Summary = {
+  backbone_nodes: 6,
+  ixp_sites: 5,
+  regions: 5,
+  total_capacity_gbps: 6200,
+  active_links: 8,
+  peak_utilization_pct: 84,
+};
+
+const defaultTopology = {
+  regions: [
+    { name: "Europe", nodes: 2, traffic_index: 94, dependency: "High" },
+    { name: "North America", nodes: 2, traffic_index: 91, dependency: "High" },
+    { name: "Asia Pacific", nodes: 1, traffic_index: 88, dependency: "Moderate" },
+    { name: "Middle East", nodes: 1, traffic_index: 76, dependency: "Moderate" },
+    { name: "Africa", nodes: 1, traffic_index: 69, dependency: "Elevated" },
+  ] as Region[],
+  backbone: [
+    { id: "LON-01", name: "London Core", region: "Europe", capacity_gbps: 1200 },
+    { id: "FRA-02", name: "Frankfurt Transit", region: "Europe", capacity_gbps: 980 },
+    { id: "JFK-03", name: "New York Gateway", region: "North America", capacity_gbps: 1400 },
+    { id: "SJC-04", name: "San Jose Edge", region: "North America", capacity_gbps: 890 },
+    { id: "DXB-05", name: "Dubai Hub", region: "Middle East", capacity_gbps: 760 },
+    { id: "SIN-06", name: "Singapore Exchange", region: "Asia Pacific", capacity_gbps: 1100 },
+  ] as Node[],
+  ixps: [
+    { id: "IXP-101", name: "London", country: "United Kingdom", region: "Europe", members: 220, lat: 51.5074, lng: -0.1278 },
+    { id: "IXP-202", name: "Frankfurt", country: "Germany", region: "Europe", members: 190, lat: 50.1109, lng: 8.6821 },
+    { id: "IXP-303", name: "New York", country: "United States", region: "North America", members: 260, lat: 40.7128, lng: -74.006 },
+    { id: "IXP-404", name: "Johannesburg", country: "South Africa", region: "Africa", members: 130, lat: -26.2041, lng: 28.0473 },
+    { id: "IXP-505", name: "Singapore", country: "Singapore", region: "Asia Pacific", members: 210, lat: 1.3521, lng: 103.8198 },
+  ] as IxpSite[],
+  landing_stations: [
+    { id: "LS-01", name: "Bude Landing Station", country: "United Kingdom", region: "Europe", lat: 50.8333, lng: -4.55 },
+    { id: "LS-02", name: "Virginia Beach Landing", country: "United States", region: "North America", lat: 36.8528, lng: -75.978 },
+    { id: "LS-03", name: "Mumbai Landing Station", country: "India", region: "Asia Pacific", lat: 19.076, lng: 72.8777 },
+  ],
+  corridors: [
+    { id: "C-101", name: "London ↔ Frankfurt", from: "London", to: "Frankfurt", capacity_gbps: 480, congestion_score: 76, regional_dependency: "Europe", redundancy_score: 68 },
+    { id: "C-106", name: "Indian Ocean Transit", from: "Singapore", to: "Johannesburg", capacity_gbps: 410, congestion_score: 67, regional_dependency: "Asia-Africa", redundancy_score: 73 },
+    { id: "C-102", name: "London ↔ New York", from: "London", to: "New York", capacity_gbps: 430, congestion_score: 71, regional_dependency: "Atlantic", redundancy_score: 74 },
+    { id: "C-103", name: "Frankfurt ↔ Singapore", from: "Frankfurt", to: "Singapore", capacity_gbps: 520, congestion_score: 82, regional_dependency: "Europe-Middle East", redundancy_score: 62 },
+    { id: "C-105", name: "New York ↔ Singapore", from: "New York", to: "Singapore", capacity_gbps: 500, congestion_score: 75, regional_dependency: "Global", redundancy_score: 65 },
+    { id: "C-104", name: "Frankfurt ↔ Dubai", from: "Frankfurt", to: "Dubai", capacity_gbps: 380, congestion_score: 69, regional_dependency: "Europe-Middle East", redundancy_score: 71 },
+    { id: "C-107", name: "Dubai ↔ Singapore", from: "Dubai", to: "Singapore", capacity_gbps: 440, congestion_score: 73, regional_dependency: "Middle East-Asia", redundancy_score: 66 },
+  ],
+} as const;
+
+const defaultFacilities: Facility[] = [
+  { id: "FAC-01", facility_name: "Equinix LD8", country: "United Kingdom", region: "Europe", operator: "Equinix", connected_networks: 118, capacity: 2400, importance_score: 98, lat: 51.5201, lng: -0.1234 },
+  { id: "FAC-02", facility_name: "Telehouse North", country: "United Kingdom", region: "Europe", operator: "Digital Realty", connected_networks: 94, capacity: 1800, importance_score: 92, lat: 51.527, lng: -0.074 },
+  { id: "FAC-03", facility_name: "MDC NYC", country: "United States", region: "North America", operator: "Digital Realty", connected_networks: 141, capacity: 2800, importance_score: 96, lat: 40.7359, lng: -74.0037 },
+  { id: "FAC-04", facility_name: "Google DC 1", country: "United States", region: "North America", operator: "Google", connected_networks: 104, capacity: 3150, importance_score: 95, lat: 37.7749, lng: -122.4194 },
+  { id: "FAC-05", facility_name: "JINX Data Hub", country: "South Africa", region: "Africa", operator: "NTT", connected_networks: 52, capacity: 1100, importance_score: 77, lat: -26.12, lng: 28.03 },
+  { id: "FAC-06", facility_name: "SIN-IX Core", country: "Singapore", region: "Asia Pacific", operator: "LINX", connected_networks: 96, capacity: 2200, importance_score: 91, lat: 1.289, lng: 103.851 },
+];
+
+const defaultOperators: Operator[] = [
+  { name: "Equinix", ownership: "Carrier-neutral colocation", influence: "High" },
+  { name: "Digital Realty", ownership: "Wholesale data center operator", influence: "High" },
+  { name: "Google", ownership: "Hyperscale infrastructure", influence: "Very High" },
+  { name: "Cloudflare", ownership: "Edge delivery network", influence: "High" },
+  { name: "LINX", ownership: "Internet exchange operator", influence: "Medium" },
+  { name: "AMS-IX", ownership: "Regional exchange hub", influence: "Medium" },
+  { name: "DE-CIX", ownership: "Global exchange provider", influence: "High" },
+  { name: "NTT", ownership: "Global telecom backbone", influence: "High" },
+];
+
+const defaultPathConcentration: PathConcentration = {
+  most_critical: [
+    { name: "Frankfurt ↔ Singapore", congestion_score: 82, regional_dependency: "High", redundancy_score: 62 },
+    { name: "London ↔ New York", congestion_score: 75, regional_dependency: "Medium", redundancy_score: 74 },
+    { name: "New York ↔ Singapore", congestion_score: 88, regional_dependency: "High", redundancy_score: 58 },
+  ],
+  dependency_index: 7.4,
+  redundancy_rating: 71,
+};
+
+const defaultSimulation: SimulationResult = {
+  status: "degraded",
+  selected_ixp: "London",
+  selected_facility: "Equinix LD8",
+  selected_cable: "Frankfurt ↔ Singapore",
+  failed_route: undefined,
+  rerouted_route: undefined,
+  affected_traffic: "842 Gbps",
+  impacted_regions: ["Europe", "Middle East"],
+  impacted_facilities: ["Equinix LD8", "Telehouse North", "SIN-IX Core"],
+  recalculated_paths: [
+    { route: "London -> Frankfurt -> Dubai", status: "rerouted" },
+    { route: "Singapore -> New York", status: "degraded" },
+  ],
+  metrics: {
+    new_congestion: 69,
+    redundancy_drop: 22,
+    regional_impact: "High",
+    recovery_window_hours: 4,
+  },
+};
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function getCorridorRiskLevel(corridor?: { congestion_score: number; redundancy_score: number }) {
+  if (!corridor) {
+    return "Moderate";
+  }
+
+  if (corridor.congestion_score >= 80 || corridor.redundancy_score <= 60) {
+    return "Critical";
+  }
+
+  if (corridor.congestion_score >= 70 || corridor.redundancy_score <= 70) {
+    return "High";
+  }
+
+  if (corridor.congestion_score >= 50) {
+    return "Moderate";
+  }
+
+  return "Low";
+}
+
+function getCorridorImpactRegions(corridor?: { regional_dependency: string; from: string; to: string }) {
+  if (!corridor) {
+    return ["Global"];
+  }
+
+  const dependencyMap: Record<string, string[]> = {
+    "Europe-Asia": ["Europe", "Asia Pacific"],
+    "Europe-North America": ["Europe", "North America"],
+    "Asia-Pacific": ["Asia Pacific", "North America"],
+    "Middle East-Europe": ["Middle East", "Europe"],
+    Europe: ["Europe"],
+    Atlantic: ["Europe", "North America"],
+    "Europe-Middle East": ["Europe", "Middle East"],
+    "Middle East-Asia": ["Middle East", "Asia Pacific"],
+    "Asia-Africa": ["Asia Pacific", "Africa"],
+    Global: ["Europe", "North America", "Asia Pacific"],
+  };
+
+  return dependencyMap[corridor.regional_dependency] ?? [corridor.from, corridor.to];
+}
+
+function buildAlternativePaths(routeName: string, backupRoute?: { from: string; to: string } | null) {
+  if (backupRoute) {
+    return [
+      { route: `${backupRoute.from} → ${backupRoute.to}`, status: "rerouted" },
+      { route: `${backupRoute.from} → Dubai → ${backupRoute.to}`, status: "degraded" },
+    ];
+  }
+
+  switch (routeName) {
+    case "London ↔ New York":
+      return [
+        { route: "London → Frankfurt → Dubai → Singapore → New York", status: "rerouted" },
+        { route: "London → Frankfurt → New York", status: "degraded" },
+      ];
+    case "Frankfurt ↔ Singapore":
+      return [
+        { route: "Frankfurt → Dubai → Singapore", status: "rerouted" },
+        { route: "Frankfurt → London → New York → Singapore", status: "degraded" },
+      ];
+    case "London ↔ Frankfurt":
+      return [
+        { route: "London → New York → Frankfurt", status: "rerouted" },
+        { route: "London → Dubai → Frankfurt", status: "degraded" },
+      ];
+    case "New York ↔ Singapore":
+      return [
+        { route: "New York → London → Frankfurt → Dubai → Singapore", status: "rerouted" },
+        { route: "New York → London → Singapore", status: "degraded" },
+      ];
+    case "Indian Ocean Transit":
+      return [
+        { route: "Singapore → Dubai → Frankfurt → London", status: "rerouted" },
+        { route: "Johannesburg → London → Singapore", status: "degraded" },
+      ];
+    default:
+      return [
+        { route: `${routeName} alternate path`, status: "rerouted" },
+        { route: `${routeName} fallback path`, status: "degraded" },
+      ];
+  }
+}
+
+export default function Home() {
+  const [summary, setSummary] = useState<Summary>(defaultSummary);
+  const [topology, setTopology] = useState(defaultTopology);
+  const [facilities, setFacilities] = useState<Facility[]>(defaultFacilities);
+  const [operators, setOperators] = useState<Operator[]>(defaultOperators);
+  const [pathConcentration, setPathConcentration] = useState<PathConcentration>(defaultPathConcentration);
+  const [why, setWhy] = useState({ headline: "The internet is a shared operating system for the modern economy.", copy: ["When a single exchange or cable corridor is interrupted, the impact spreads beyond one city or region. Traffic reroutes across broader transit systems, driving congestion and delay in markets that depend on digital commerce and cloud access.", "This dashboard helps identify where internet infrastructure is concentrated, who owns the critical nodes, and which routes are most exposed to service disruption."] });
+  const [simulation, setSimulation] = useState<SimulationResult>(defaultSimulation);
+  const [filters, setFilters] = useState({ region: "All regions", operator: "All operators", ixp: "All IXPs" });
+  const [mapFilters, setMapFilters] = useState({ region: "All regions", asn: "All ASNs", facility: "All facilities", capacity: "All capacities" });
+  const [loading, setLoading] = useState(true);
+
+  const handleDownloadSampleData = async () => {
+    const sampleData = {
+      summary,
+      topology,
+      facilities,
+      operators,
+      pathConcentration,
+      why,
+      simulation,
+      filters,
+      mapFilters,
+    };
+
+    const blob = new Blob([JSON.stringify(sampleData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "real-rails-sample-data.json";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [summaryResponse, topologyResponse, facilityResponse, operatorsResponse, pathResponse, whyResponse] = await Promise.all([
+          fetch("http://localhost:8000/api/network/summary"),
+          fetch("http://localhost:8000/api/network/topology"),
+          fetch("http://localhost:8000/api/network/facilities"),
+          fetch("http://localhost:8000/api/network/operators"),
+          fetch("http://localhost:8000/api/network/path-concentration"),
+          fetch("http://localhost:8000/api/network/why-this-matters"),
+        ]);
+
+        if (summaryResponse.ok) {
+          setSummary(await summaryResponse.json());
+        }
+        if (topologyResponse.ok) {
+          setTopology(await topologyResponse.json());
+        }
+        if (facilityResponse.ok) {
+          setFacilities(await facilityResponse.json());
+        }
+        if (operatorsResponse.ok) {
+          setOperators(await operatorsResponse.json());
+        }
+        if (pathResponse.ok) {
+          setPathConcentration(await pathResponse.json());
+        }
+        if (whyResponse.ok) {
+          const whyData = await whyResponse.json();
+          setWhy(whyData);
+        }
+      } catch (error) {
+        console.error("Unable to load network telemetry:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  const filteredFacilities = useMemo(() => {
+    return facilities.filter((facility) => {
+      const effectiveRegion = mapFilters.region === "All regions" ? filters.region : mapFilters.region;
+      const regionMatches = effectiveRegion === "All regions" || facility.region === effectiveRegion;
+      const operatorMatches = filters.operator === "All operators" || facility.operator === filters.operator;
+      const ixpMatches = filters.ixp === "All IXPs" || topology.ixps.some((ixp) => ixp.name === filters.ixp && ixp.region === facility.region);
+      const facilityMatches = mapFilters.facility === "All facilities" || facility.facility_name === mapFilters.facility;
+      const capacityMatches = mapFilters.capacity === "All capacities" ||
+        (mapFilters.capacity === "500 Gbps+" && facility.capacity >= 500) ||
+        (mapFilters.capacity === "1000 Gbps+" && facility.capacity >= 1000) ||
+        (mapFilters.capacity === "2000 Gbps+" && facility.capacity >= 2000);
+      return regionMatches && operatorMatches && ixpMatches && facilityMatches && capacityMatches;
+    });
+  }, [facilities, filters, mapFilters, topology.ixps]);
+
+  useEffect(() => {
+    const loadSimulation = async () => {
+      try {
+        const params = new URLSearchParams({
+          ixp: filters.ixp === "All IXPs" ? "London" : filters.ixp,
+          facility: filteredFacilities[0]?.facility_name ?? "Equinix LD8",
+          cable: "Frankfurt ↔ Singapore",
+        });
+        const response = await fetch(`http://localhost:8000/api/network/route-simulation?${params.toString()}`);
+        if (response.ok) {
+          const nextSimulation = await response.json();
+          setSimulation(nextSimulation);
+        }
+      } catch (error) {
+        console.error("Simulation error:", error);
+      }
+    };
+
+    loadSimulation();
+  }, []);
+
+  const mapMarkers = useMemo(() => {
+    return [
+      ...topology.ixps.map((ixp) => ({ ...ixp, type: "IXP" as const, name: ixp.name })),
+      ...topology.landing_stations.map((station) => ({ ...station, type: "Cable Landing" as const, name: station.name })),
+      ...facilities.map((facility) => ({ ...facility, type: "Facility" as const, name: facility.facility_name })),
+    ] as Array<{ id: string; name: string; type: "IXP" | "Cable Landing" | "Facility"; lat: number; lng: number; region?: string; capacity?: number; connected_networks?: number; members?: number }>;
+  }, [facilities, topology.ixps, topology.landing_stations]);
+
+  const selectedFacility = useMemo(() => {
+      if (!simulation.selected_facility) return null;
+
+      return (
+          facilities.find(
+              (facility) =>
+                  facility.facility_name === simulation.selected_facility
+          ) ?? null
+      );
+  }, [facilities, simulation.selected_facility]);
+
+  const selectedCorridor = useMemo(
+    () => topology.corridors.find((corridor) => corridor.name === simulation.selected_cable) ?? topology.corridors[0],
+    [simulation.selected_cable, topology.corridors],
+  );
+  const backupRouteMap: Record<string, string> = {
+    "London ↔ Frankfurt": "London ↔ New York",
+    "London ↔ New York": "Frankfurt ↔ Dubai",
+    "Frankfurt ↔ Dubai": "Dubai ↔ Singapore",
+    "Dubai ↔ Singapore": "London ↔ Frankfurt",
+    "Frankfurt ↔ Singapore": "Frankfurt ↔ Dubai",
+    "New York ↔ Singapore": "London ↔ New York",
+    "Indian Ocean Transit": "Dubai ↔ Singapore",
+  };
+
+  const failedCorridor = useMemo(
+    () => topology.corridors.find((corridor) => corridor.name === simulation.failed_route) ?? null,
+    [simulation.failed_route, topology.corridors],
+  );
+
+  const backupCorridor = useMemo(
+    () => topology.corridors.find((corridor) => corridor.name === simulation.rerouted_route) ?? null,
+    [simulation.rerouted_route, topology.corridors],
+  );
+  const simulateSelectedCorridorFailure = () => {
+    if (!selectedCorridor) {
+      return;
+    }
+
+  const riskLevel = getCorridorRiskLevel(selectedCorridor);
+  const impactRegions = getCorridorImpactRegions(selectedCorridor);
+  const trafficUtilization = clamp(
+    selectedCorridor.congestion_score + 11,
+    0,
+    100
+  );
+
+  const backupRouteName = backupRouteMap[selectedCorridor.name];
+
+  const backupRoute =
+    topology.corridors.find(
+      (route) => route.name === backupRouteName
+    ) ?? null;
+
+  setSimulation((prev) => ({
+    ...prev,
+    status: "rerouted",
+    failed_route: selectedCorridor.name,
+    rerouted_route: backupRoute ? backupRoute.name : undefined,
+    affected_traffic: `${Math.round(selectedCorridor.capacity_gbps * 1.8)} Gbps`,
+    impacted_regions: impactRegions,
+    impacted_facilities: [
+      selectedFacility?.facility_name ?? prev.selected_facility,
+      "Telehouse North",
+      "SIN-IX Core",
+    ]
+      .filter(Boolean)
+      .slice(0, 3),
+    recalculated_paths: buildAlternativePaths(selectedCorridor.name, backupRoute),
+    metrics: {
+      new_congestion: clamp(
+        backupRoute ? backupRoute.congestion_score + 18 : trafficUtilization,
+        0,
+        100
+      ),
+      redundancy_drop: clamp(100 - selectedCorridor.redundancy_score, 0, 100),
+      regional_impact: riskLevel,
+      recovery_window_hours: selectedCorridor.capacity_gbps >= 500 ? 6 : 4,
+    },
+  }));
+
+  setSummary((prev) => ({
+    ...prev,
+    active_links: Math.max(0, prev.active_links - 1),
+    peak_utilization_pct: clamp(
+      prev.peak_utilization_pct + 8,
+      0,
+      100
+    ),
+    total_capacity_gbps: Math.max(
+      0,
+      prev.total_capacity_gbps - selectedCorridor.capacity_gbps
+    ),
+  }));
+};
+
+  const updateSimulationSelection = (field: "selected_ixp" | "selected_facility" | "selected_cable", value: string) => {
+    setSimulation(prev => ({
+        ...prev,
+        [field]: value,
+        ...(field === "selected_cable" ? { failed_route: undefined, rerouted_route: undefined, status: "degraded" } : {}),
+    }));
+
+    if (field === "selected_ixp") {
+      setFilters((prev) => ({ ...prev, ixp: value }));
+    }
+
+    if (field === "selected_facility") {
+      setMapFilters((prev) => ({ ...prev, facility: value }));
+    }
+  };
+
+  return (
+    <div className="flex-1 flex flex-col w-full h-full overflow-hidden bg-[#030712] m-0 p-0">
+      <header className="flex items-center justify-between px-6 py-4 border-b border-[#1F2937] bg-[#0B1117] shrink-0">
+        <div>
+          <span className="text-xs uppercase tracking-wider text-[#38BDF8] font-semibold">Real Rails Intelligence Library</span>
+          <h1 className="text-xl font-bold text-slate-100">Internet Backbone & IXP Map</h1>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-slate-400">
+            Peak <span className="text-[#38BDF8] font-semibold">{summary.peak_utilization_pct}%</span>
+          </div>
+          <div className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            {loading ? "Syncing" : "Live"}
+          </div>
+        </div>
+      </header>
+
+      <div className="flex-1 flex flex-row w-full h-[calc(100vh-73px)] overflow-hidden">
+        <section className="w-[70%] h-full flex flex-col border-r border-[#1F2937] bg-[#030712] overflow-y-auto">
+          <div className="p-4 grid grid-cols-4 gap-4 shrink-0">
+            <article className="bg-[#0B1117] border border-[#1F2937] rounded-lg p-3 flex flex-col">
+              <span className="text-xs text-slate-400 font-medium">Backbone nodes</span>
+              <strong className="text-lg font-bold text-slate-100 mt-1">{summary.backbone_nodes}</strong>
+            </article>
+            <article className="bg-[#0B1117] border border-[#1F2937] rounded-lg p-3 flex flex-col">
+              <span className="text-xs text-slate-400 font-medium">IXP sites</span>
+              <strong className="text-lg font-bold text-slate-100 mt-1">{summary.ixp_sites}</strong>
+            </article>
+            <article className="bg-[#0B1117] border border-[#1F2937] rounded-lg p-3 flex flex-col">
+              <span className="text-xs text-slate-400 font-medium">Regions</span>
+              <strong className="text-lg font-bold text-slate-100 mt-1">{summary.regions}</strong>
+            </article>
+            <article className="bg-[#0B1117] border border-[#1F2937] rounded-lg p-3 flex flex-col">
+              <span className="text-xs text-slate-400 font-medium">Total capacity</span>
+              <strong className="text-lg font-bold text-slate-100 mt-1">{summary.total_capacity_gbps} Gbps</strong>
+            </article>
+          </div>
+
+          <div className="px-4 flex-1 flex flex-col min-h-[450px]">
+            <div className="bg-[#0B1117] border border-[#1F2937] rounded-lg flex-1 flex flex-col overflow-hidden relative">
+              <MapView
+                topology={topology}
+                facilities={facilities}
+                simulation={simulation}
+                setSimulation={setSimulation}
+                filters={filters}
+                setFilters={setFilters}
+                mapFilters={mapFilters}
+                setMapFilters={setMapFilters}
+                pathConcentration={pathConcentration}
+              />
+            </div>
+          </div>
+
+          <div className="p-4 grid grid-cols-2 gap-4 shrink-0">
+            <div className="bg-[#0B1117] border border-[#1F2937] rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold text-slate-200">Facility cards</h2>
+                <span className="text-xs text-[#38BDF8]">{filteredFacilities.length} active</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {filteredFacilities.slice(0, 4).map((facility) => (
+                  <article
+                    key={facility.id}
+                    className={`bg-[#030712] border border-[#1F2937] rounded p-3 flex flex-col gap-2 ${
+                      filteredFacilities.length === 1 ? "col-span-2" : ""
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <strong className="text-xs font-semibold text-slate-200 truncate">
+                        {facility.facility_name}
+                      </strong>
+                      <span className="text-[10px] text-slate-400">
+                        {facility.country}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-1 text-[11px]">
+                      <div>
+                        <span className="text-slate-500 block">Operator</span>
+                        <span className="text-slate-300 truncate block">
+                          {facility.operator}
+                        </span>
+                      </div>
+
+                      <div>
+                        <span className="text-slate-500 block">Networks</span>
+                        <span className="text-slate-300 block">
+                          {facility.connected_networks}
+                        </span>
+                      </div>
+
+                      <div>
+                        <span className="text-slate-500 block">Capacity</span>
+                        <span className="text-slate-300 block">
+                          {facility.capacity} Gbps
+                        </span>
+                      </div>
+
+                      <div>
+                        <span className="text-slate-500 block">Score</span>
+                        <span className="text-slate-300 block">
+                          {facility.importance_score}
+                        </span>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-[#0B1117] border border-[#1F2937] rounded-lg p-4 flex flex-col">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold text-slate-200">Path concentration</h2>
+              </div>
+              <div className="flex flex-col gap-2.5 flex-1 justify-center">
+                {pathConcentration.most_critical.map((item) => (
+                  <div key={item.name} className="bg-[#030712] border border-[#1F2937] rounded p-2.5 flex items-center justify-between">
+                    <div>
+                      <strong className="text-xs font-semibold text-slate-200 block">{item.name}</strong>
+                      <small className="text-[10px] text-slate-400">{item.regional_dependency}</small>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <span className="text-xs font-bold text-amber-400 block">{item.congestion_score}%</span>
+                        <small className="text-[9px] text-slate-500">Congestion</small>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs font-bold text-[#38BDF8] block">{item.redundancy_score}%</span>
+                        <small className="text-[9px] text-slate-500">Redundancy</small>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="px-4 pb-4 grid grid-cols-2 gap-4 shrink-0">
+            <div className="bg-[#0B1117] border border-[#1F2937] rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold text-slate-200">Route failure simulation</h2>
+                <span className="text-xs px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">{simulation.status}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <label className="flex flex-col gap-1 text-xs">
+                  <span className="text-slate-400">IXP</span>
+                  <select className="bg-[#030712] border border-[#1F2937] rounded p-1 text-slate-200 text-xs" value={simulation.selected_ixp} onChange={(event) => updateSimulationSelection("selected_ixp", event.target.value)}>
+                    {topology.ixps.map((ixp) => (
+                      <option key={ixp.id} value={ixp.name}>{ixp.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-xs">
+                  <span className="text-slate-400">Facility</span>
+                  <select className="bg-[#030712] border border-[#1F2937] rounded p-1 text-slate-200 text-xs" value={simulation.selected_facility} onChange={(event) => updateSimulationSelection("selected_facility", event.target.value)}>
+                    {facilities.map((facility) => (
+                      <option key={facility.id} value={facility.facility_name}>{facility.facility_name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-xs">
+                  <span className="text-slate-400">Cable</span>
+                  <select className="bg-[#030712] border border-[#1F2937] rounded p-1 text-slate-200 text-xs" value={simulation.selected_cable} onChange={(event) => updateSimulationSelection("selected_cable", event.target.value)}>
+                    {topology.corridors.map((corridor) => (
+                      <option key={corridor.id} value={corridor.name}>{corridor.name}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="bg-[#030712] border border-[#1F2937] rounded p-2.5 flex items-center justify-between text-xs mb-2">
+                <div>
+                  <span className="text-slate-500 block text-[10px]">Affected traffic</span>
+                  <strong className="text-slate-200 font-semibold">{simulation.affected_traffic}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px]">Impacted regions</span>
+                  <strong className="text-slate-200 font-semibold">{simulation.impacted_regions.join(", ")}</strong>
+                </div>
+              </div>
+              <ul className="flex flex-col gap-1.5">
+                {simulation.recalculated_paths.map((path) => (
+                  <li key={path.route} className="bg-[#030712]/50 border border-[#1F2937]/50 rounded px-2.5 py-1.5 flex items-center justify-between text-[11px]">
+                    <span className="text-slate-300">{path.route}</span>
+                    <em className="text-amber-400 not-italic font-medium">{path.status}</em>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="bg-[#0B1117] border border-[#1F2937] rounded-lg p-4 flex flex-col">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold text-slate-200">Who controls the rail</h2>
+              </div>
+              <ul className="flex flex-col gap-2 flex-1 justify-center">
+                {operators.map((operator) => (
+                  <li key={operator.name} className="bg-[#030712] border border-[#1F2937] rounded p-2 flex items-center justify-between text-xs">
+                    <div>
+                      <strong className="text-slate-200 font-semibold block">{operator.name}</strong>
+                      <small className="text-[10px] text-slate-400">{operator.ownership}</small>
+                    </div>
+                    <span className="text-[11px] font-medium text-[#38BDF8] bg-[#38BDF8]/10 px-2 py-0.5 rounded border border-[#38BDF8]/20">{operator.influence}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <aside className="w-[30%] h-full bg-[#0B1117] border-l border-[#1F2937] flex flex-col overflow-y-auto p-4 gap-5">
+          <div className="bg-[#030712] border border-[#1F2937] rounded-lg p-4">
+            <h3 className="text-xs font-semibold text-[#38BDF8] uppercase tracking-wider mb-3">Key Metrics</h3>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-[#0B1117] border border-[#1F2937] rounded p-2">
+                <span className="text-[10px] text-slate-400 block">Active links</span>
+                <strong className="text-sm font-bold text-slate-100">{summary.active_links}</strong>
+              </div>
+              <div className="bg-[#0B1117] border border-[#1F2937] rounded p-2">
+                <span className="text-[10px] text-slate-400 block">Traffic</span>
+                <strong className="text-sm font-bold text-slate-100">{simulation.affected_traffic}</strong>
+              </div>
+              <div className="bg-[#0B1117] border border-[#1F2937] rounded p-2">
+                <span className="text-[10px] text-slate-400 block">Risk</span>
+                <strong className="text-sm font-bold text-amber-400">{simulation.metrics.regional_impact}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-[#030712] border border-[#1F2937] rounded-lg p-4 flex flex-col gap-3">
+            <h3 className="text-xs font-semibold text-[#38BDF8] uppercase tracking-wider">Selected IXP</h3>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              <strong className="text-slate-100">Active Route:</strong>{" "}
+              {simulation.selected_ixp || "--"} 
+            </p>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="bg-[#0B1117] border border-[#1F2937] rounded p-2">
+                <span className="text-[10px] text-slate-400 block">Facility</span>
+                <strong className="text-slate-200 truncate block">
+                  {selectedFacility?.facility_name || simulation.selected_facility || "--"}
+                </strong>
+              </div>
+              <div className="bg-[#0B1117] border border-[#1F2937] rounded p-2">
+                <span className="text-[10px] text-slate-400 block">Capacity</span>
+                <strong className="text-slate-200 block">{selectedFacility?.capacity ?? 2400} Gbps</strong>
+              </div>
+              <div className="bg-[#0B1117] border border-[#1F2937] rounded p-2">
+                <span className="text-[10px] text-slate-400 block">Connected networks</span>
+                <strong className="text-slate-200 block">{selectedFacility?.connected_networks ?? 118}</strong>
+              </div>
+              <div className="bg-[#0B1117] border border-[#1F2937] rounded p-2">
+                <span className="text-[10px] text-slate-400 block">Importance score</span>
+                <strong className="text-slate-200 block">{selectedFacility?.importance_score ?? 98}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-[#030712] border border-[#1F2937] rounded-lg p-4 flex flex-col gap-3">
+            <h3 className="text-xs font-semibold text-[#38BDF8] uppercase tracking-wider">Selected Corridor</h3>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              <strong className="text-slate-100">{selectedCorridor?.name ?? simulation.selected_cable}</strong> is the active backbone route in the intelligence layer.
+            </p>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="bg-[#0B1117] border border-[#1F2937] rounded p-2">
+                <span className="text-[10px] text-slate-400 block">Source</span>
+                <strong className="text-slate-200 truncate block">{selectedCorridor?.from ?? "Unknown"}</strong>
+              </div>
+              <div className="bg-[#0B1117] border border-[#1F2937] rounded p-2">
+                <span className="text-[10px] text-slate-400 block">Destination</span>
+                <strong className="text-slate-200 truncate block">{selectedCorridor?.to ?? "Unknown"}</strong>
+              </div>
+              <div className="bg-[#0B1117] border border-[#1F2937] rounded p-2">
+                <span className="text-[10px] text-slate-400 block">Capacity</span>
+                <strong className="text-slate-200 block">{selectedCorridor?.capacity_gbps ?? 0} Gbps</strong>
+              </div>
+              <div className="bg-[#0B1117] border border-[#1F2937] rounded p-2">
+                <span className="text-[10px] text-slate-400 block">Traffic utilization</span>
+                <strong className="text-slate-200 block">{selectedCorridor ? clamp(selectedCorridor.congestion_score + 11, 0, 100) : 0}%</strong>
+              </div>
+              <div className="bg-[#0B1117] border border-[#1F2937] rounded p-2">
+                <span className="text-[10px] text-slate-400 block">Risk level</span>
+                <strong className="text-amber-400 block">{getCorridorRiskLevel(selectedCorridor)}</strong>
+              </div>
+              <div className="bg-[#0B1117] border border-[#1F2937] rounded p-2">
+                <span className="text-[10px] text-slate-400 block">Regional dependency</span>
+                <strong className="text-slate-200 truncate block">{selectedCorridor?.regional_dependency ?? "Unknown"}</strong>
+              </div>
+            </div>
+            <button type="button" className="w-full mt-1 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-semibold py-2 rounded transition-colors" onClick={simulateSelectedCorridorFailure}>
+              Simulate Failure
+            </button>
+          </div>
+
+          {simulation.failed_route && (
+            <div className="bg-[#030712] border border-red-500/30 rounded-lg p-4 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold text-red-400 uppercase tracking-wider">Route Failure Active</h3>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20 font-semibold">FAILED</span>
+              </div>
+              <div className="grid grid-cols-1 gap-2 text-xs">
+                <div className="bg-[#0B1117] border border-red-500/20 rounded p-2">
+                  <span className="text-[10px] text-slate-400 block">Failed Corridor</span>
+                  <strong className="text-red-400 block">{failedCorridor?.name ?? simulation.failed_route}</strong>
+                  <span className="text-[10px] text-slate-500">{failedCorridor?.from} → {failedCorridor?.to}</span>
+                </div>
+                <div className="bg-[#0B1117] border border-emerald-500/20 rounded p-2">
+                  <span className="text-[10px] text-slate-400 block">Backup Corridor</span>
+                  <strong className="text-emerald-400 block">{backupCorridor?.name ?? simulation.rerouted_route ?? "No backup available"}</strong>
+                  {backupCorridor && (
+                    <span className="text-[10px] text-slate-500">{backupCorridor.from} → {backupCorridor.to}</span>
+                  )}
+                </div>
+                <div className="bg-[#0B1117] border border-[#1F2937] rounded p-2">
+                  <span className="text-[10px] text-slate-400 block">Traffic rerouted via</span>
+                  <strong className="text-slate-200 block">
+                    {backupCorridor
+                      ? `${backupCorridor.from} → ${backupCorridor.to} (${backupCorridor.name})`
+                      : simulation.recalculated_paths[0]?.route ?? "Alternate path"}
+                  </strong>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-[#0B1117] border border-[#1F2937] rounded p-2 text-center">
+                    <span className="text-[10px] text-slate-400 block">Congestion</span>
+                    <strong className="text-amber-400 block">{simulation.metrics.new_congestion}%</strong>
+                  </div>
+                  <div className="bg-[#0B1117] border border-[#1F2937] rounded p-2 text-center">
+                    <span className="text-[10px] text-slate-400 block">Redundancy</span>
+                    <strong className="text-[#38BDF8] block">-{simulation.metrics.redundancy_drop}%</strong>
+                  </div>
+                  <div className="bg-[#0B1117] border border-[#1F2937] rounded p-2 text-center">
+                    <span className="text-[10px] text-slate-400 block">Recovery</span>
+                    <strong className="text-slate-200 block">{simulation.metrics.recovery_window_hours}h</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-[#030712] border border-[#1F2937] rounded-lg p-4 flex flex-col gap-2">
+            <h3 className="text-xs font-semibold text-[#38BDF8] uppercase tracking-wider">Why This Matters</h3>
+            <p className="text-xs text-slate-300 leading-relaxed">{why.copy[0]}</p>
+            <p className="text-xs text-slate-300 leading-relaxed">{why.copy[1]}</p>
+          </div>
+
+          <div className="bg-[#030712] border border-[#1F2937] rounded-lg p-4 flex flex-col gap-2">
+            <h3 className="text-xs font-semibold text-[#38BDF8] uppercase tracking-wider">Who Controls the Rail</h3>
+            <ul className="flex flex-col gap-1.5">
+              {operators.slice(0, 6).map((operator) => (
+                <li key={operator.name} className="flex items-center justify-between text-xs py-1 border-b border-[#1F2937]/50 last:border-0">
+                  <strong className="text-slate-200">{operator.name}</strong>
+                  <span className="text-slate-400 text-[11px]">{operator.influence}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="bg-[#030712] border border-[#1F2937] rounded-xl p-5 space-y-4 shadow-sm">
+            <h3 className="text-sm font-semibold text-cyan-400 uppercase tracking-wider">
+              Functional Filters
+            </h3>
+
+            <div className="space-y-4">
+
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                  Region
+                </label>
+                <select
+                  className="w-full h-10 rounded-lg bg-[#0B1117] border border-[#1F2937] px-3 text-sm text-slate-200 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition"
+                  value={filters.region}
+                  onChange={(event) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      region: event.target.value,
+                    }))
+                  }
+                >
+                  <option value="All regions">All Regions</option>
+                  {topology.regions.map((region) => (
+                    <option key={region.name} value={region.name}>
+                      {region.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                  Operator
+                </label>
+                <select
+                  className="w-full h-10 rounded-lg bg-[#0B1117] border border-[#1F2937] px-3 text-sm text-slate-200 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition"
+                  value={filters.operator}
+                  onChange={(event) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      operator: event.target.value,
+                    }))
+                  }
+                >
+                  <option value="All operators">All Operators</option>
+                  {operators.map((operator) => (
+                    <option key={operator.name} value={operator.name}>
+                      {operator.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                  Internet Exchange Point (IXP)
+                </label>
+                <select
+                  className="w-full h-10 rounded-lg bg-[#0B1117] border border-[#1F2937] px-3 text-sm text-slate-200 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition"
+                  value={filters.ixp}
+                  onChange={(event) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      ixp: event.target.value,
+                    }))
+                  }
+                >
+                  <option value="All IXPs">All IXPs</option>
+                  {topology.ixps.map((ixp) => (
+                    <option key={ixp.id} value={ixp.name}>
+                      {ixp.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+            </div>
+          </div>
+
+          <button type="button" className="w-full bg-[#38BDF8]/10 hover:bg-[#38BDF8]/20 border border-[#38BDF8]/30 text-[#38BDF8] text-xs font-semibold py-2.5 rounded transition-colors" onClick={handleDownloadSampleData}>
+            Download Sample Data
+          </button>
+        </aside>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="frontend/public/file.svg">
+<svg fill="none" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 13.5V5.41a1 1 0 0 0-.3-.7L9.8.29A1 1 0 0 0 9.08 0H1.5v13.5A2.5 2.5 0 0 0 4 16h8a2.5 2.5 0 0 0 2.5-2.5m-1.5 0v-7H8v-5H3v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1M9.5 5V2.12L12.38 5zM5.13 5h-.62v1.25h2.12V5zm-.62 3h7.12v1.25H4.5zm.62 3h-.62v1.25h7.12V11z" clip-rule="evenodd" fill="#666" fill-rule="evenodd"/></svg>
+</file>
+
+<file path="frontend/public/globe.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><g clip-path="url(#a)"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.27 14.1a6.5 6.5 0 0 0 3.67-3.45q-1.24.21-2.7.34-.31 1.83-.97 3.1M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.48-1.52a7 7 0 0 1-.96 0H7.5a4 4 0 0 1-.84-1.32q-.38-.89-.63-2.08a40 40 0 0 0 3.92 0q-.25 1.2-.63 2.08a4 4 0 0 1-.84 1.31zm2.94-4.76q1.66-.15 2.95-.43a7 7 0 0 0 0-2.58q-1.3-.27-2.95-.43a18 18 0 0 1 0 3.44m-1.27-3.54a17 17 0 0 1 0 3.64 39 39 0 0 1-4.3 0 17 17 0 0 1 0-3.64 39 39 0 0 1 4.3 0m1.1-1.17q1.45.13 2.69.34a6.5 6.5 0 0 0-3.67-3.44q.65 1.26.98 3.1M8.48 1.5l.01.02q.41.37.84 1.31.38.89.63 2.08a40 40 0 0 0-3.92 0q.25-1.2.63-2.08a4 4 0 0 1 .85-1.32 7 7 0 0 1 .96 0m-2.75.4a6.5 6.5 0 0 0-3.67 3.44 29 29 0 0 1 2.7-.34q.31-1.83.97-3.1M4.58 6.28q-1.66.16-2.95.43a7 7 0 0 0 0 2.58q1.3.27 2.95.43a18 18 0 0 1 0-3.44m.17 4.71q-1.45-.12-2.69-.34a6.5 6.5 0 0 0 3.67 3.44q-.65-1.27-.98-3.1" fill="#666"/></g><defs><clipPath id="a"><path fill="#fff" d="M0 0h16v16H0z"/></clipPath></defs></svg>
+</file>
+
+<file path="frontend/public/next.svg">
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 394 80"><path fill="#000" d="M262 0h68.5v12.7h-27.2v66.6h-13.6V12.7H262V0ZM149 0v12.7H94v20.4h44.3v12.6H94v21h55v12.6H80.5V0h68.7zm34.3 0h-17.8l63.8 79.4h17.9l-32-39.7 32-39.6h-17.9l-23 28.6-23-28.6zm18.3 56.7-9-11-27.1 33.7h17.8l18.3-22.7z"/><path fill="#000" d="M81 79.3 17 0H0v79.3h13.6V17l50.2 62.3H81Zm252.6-.4c-1 0-1.8-.4-2.5-1s-1.1-1.6-1.1-2.6.3-1.8 1-2.5 1.6-1 2.6-1 1.8.3 2.5 1a3.4 3.4 0 0 1 .6 4.3 3.7 3.7 0 0 1-3 1.8zm23.2-33.5h6v23.3c0 2.1-.4 4-1.3 5.5a9.1 9.1 0 0 1-3.8 3.5c-1.6.8-3.5 1.3-5.7 1.3-2 0-3.7-.4-5.3-1s-2.8-1.8-3.7-3.2c-.9-1.3-1.4-3-1.4-5h6c.1.8.3 1.6.7 2.2s1 1.2 1.6 1.5c.7.4 1.5.5 2.4.5 1 0 1.8-.2 2.4-.6a4 4 0 0 0 1.6-1.8c.3-.8.5-1.8.5-3V45.5zm30.9 9.1a4.4 4.4 0 0 0-2-3.3 7.5 7.5 0 0 0-4.3-1.1c-1.3 0-2.4.2-3.3.5-.9.4-1.6 1-2 1.6a3.5 3.5 0 0 0-.3 4c.3.5.7.9 1.3 1.2l1.8 1 2 .5 3.2.8c1.3.3 2.5.7 3.7 1.2a13 13 0 0 1 3.2 1.8 8.1 8.1 0 0 1 3 6.5c0 2-.5 3.7-1.5 5.1a10 10 0 0 1-4.4 3.5c-1.8.8-4.1 1.2-6.8 1.2-2.6 0-4.9-.4-6.8-1.2-2-.8-3.4-2-4.5-3.5a10 10 0 0 1-1.7-5.6h6a5 5 0 0 0 3.5 4.6c1 .4 2.2.6 3.4.6 1.3 0 2.5-.2 3.5-.6 1-.4 1.8-1 2.4-1.7a4 4 0 0 0 .8-2.4c0-.9-.2-1.6-.7-2.2a11 11 0 0 0-2.1-1.4l-3.2-1-3.8-1c-2.8-.7-5-1.7-6.6-3.2a7.2 7.2 0 0 1-2.4-5.7 8 8 0 0 1 1.7-5 10 10 0 0 1 4.3-3.5c2-.8 4-1.2 6.4-1.2 2.3 0 4.4.4 6.2 1.2 1.8.8 3.2 2 4.3 3.4 1 1.4 1.5 3 1.5 5h-5.8z"/></svg>
+</file>
+
+<file path="frontend/public/vercel.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1155 1000"><path d="m577.3 0 577.4 1000H0z" fill="#fff"/></svg>
+</file>
+
+<file path="frontend/public/window.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M1.5 2.5h13v10a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1zM0 1h16v11.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 0 12.5zm3.75 4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M7 4.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m1.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5" fill="#666"/></svg>
+</file>
+
+<file path="frontend/.gitignore">
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+</file>
+
+<file path="frontend/AGENTS.md">
+<!-- BEGIN:nextjs-agent-rules -->
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+<!-- END:nextjs-agent-rules -->
+</file>
+
+<file path="frontend/CLAUDE.md">
+@AGENTS.md
+</file>
+
+<file path="frontend/eslint.config.mjs">
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
+
+const eslintConfig = defineConfig([
+  ...nextVitals,
+  ...nextTs,
+  // Override default ignores of eslint-config-next.
+  globalIgnores([
+    // Default ignores of eslint-config-next:
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+  ]),
+]);
+
+export default eslintConfig;
+</file>
+
+<file path="frontend/next.config.ts">
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  /* config options here */
+};
+
+export default nextConfig;
+</file>
+
+<file path="frontend/package.json">
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "leaflet": "^1.9.4",
+    "next": "16.2.12",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-leaflet": "^5.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.12",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
+</file>
+
+<file path="frontend/postcss.config.mjs">
+const config = {
+  plugins: {
+    "@tailwindcss/postcss": {},
+  },
+};
+
+export default config;
+</file>
+
+<file path="frontend/README.md">
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
+## Getting Started
+
+First, run the development server:
+
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+</file>
+
+<file path="frontend/tsconfig.json">
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "**/*.mts"
+  ],
+  "exclude": ["node_modules"]
+}
+</file>
+
+<file path=".env.example">
+
+</file>
+
+<file path=".gitignore">
+# Python
+backend/venv/
+__pycache__/
+
+# Node
+frontend/node_modules/
+frontend/.next/
+
+# Environment
+.env
+backend/.env
+
+# OS
+.DS_Store
+Thumbs.db
+</file>
+
+<file path="README.md">
+# Internet Backbone & IXP Map
+
+Real Rails Intelligence Library
+
+POC 40
+</file>
+
+<file path="UAT_CHECKLIST.md">
+# User Acceptance Testing (UAT) Checklist
+
+## Project
+
+Internet Backbone & IXP Map
+
+---
+
+## Functional Testing
+
+| Test Case | Status |
+|-----------|--------|
+| Application launches successfully | ✅ |
+| Backend API starts | ✅ |
+| Frontend starts | ✅ |
+| Interactive map loads | ✅ |
+| IXP markers visible | ✅ |
+| Facility markers visible | ✅ |
+| Backbone routes visible | ✅ |
+| Route selection works | ✅ |
+| Facility selection works | ✅ |
+| Dashboard updates on selection | ✅ |
+| Region filter works | ✅ |
+| Facility filter works | ✅ |
+| Capacity filter works | ✅ |
+| ASN filter works | ✅ |
+| Route failure simulation works | ✅ |
+| Alternative routes displayed | ✅ |
+| Metrics update after simulation | ✅ |
+
+---
+
+## UI Testing
+
+| Test Case | Status |
+|-----------|--------|
+| Responsive layout | ✅ |
+| Proper alignment | ✅ |
+| Consistent styling | ✅ |
+| No major UI issues | ✅ |
+
+---
+
+## Final Result
+
+**UAT Status: PASSED**
+
+The application meets the functional and visual requirements for the Proof of Concept.
+</file>
+
+<file path="VAR_REPORT.md">
+# Validation Report (VAR)
+
+## Project
+
+Internet Backbone & IXP Map
+
+---
+
+## Validation Summary
+
+| Feature | Status |
+|---------|--------|
+| Frontend builds successfully | ✅ PASS |
+| Backend starts successfully | ✅ PASS |
+| Interactive map renders | ✅ PASS |
+| IXP markers displayed | ✅ PASS |
+| Facility markers displayed | ✅ PASS |
+| Backbone corridors displayed | ✅ PASS |
+| Route selection works | ✅ PASS |
+| Facility selection works | ✅ PASS |
+| Dashboard updates correctly | ✅ PASS |
+| Functional filters work | ✅ PASS |
+| Route failure simulation works | ✅ PASS |
+| Alternative routes displayed | ✅ PASS |
+| Responsive dashboard | ✅ PASS |
+
+---
+
+## Result
+
+**Overall Status: PASS**
+
+The application satisfies the required Proof of Concept functionality and all implemented features were successfully validated.
+</file>
+
+</files>
