@@ -314,12 +314,12 @@ export default function Home() {
     const loadData = async () => {
       try {
         const [summaryResponse, topologyResponse, facilityResponse, operatorsResponse, pathResponse, whyResponse] = await Promise.all([
-          fetch("http://localhost:8000/api/network/summary"),
-          fetch("http://localhost:8000/api/network/topology"),
-          fetch("http://localhost:8000/api/network/facilities"),
-          fetch("http://localhost:8000/api/network/operators"),
-          fetch("http://localhost:8000/api/network/path-concentration"),
-          fetch("http://localhost:8000/api/network/why-this-matters"),
+          fetch(`${API_URL}/api/network/summary`),
+          fetch(`${API_URL}/api/network/topology`),
+          fetch(`${API_URL}/api/network/facilities`),
+          fetch(`${API_URL}/api/network/operators`),
+          fetch(`${API_URL}/api/network/path-concentration`),
+          fetch(`${API_URL}/api/network/why-this-matters`),
         ]);
 
         if (summaryResponse.ok) {
@@ -374,7 +374,7 @@ export default function Home() {
           facility: filteredFacilities[0]?.facility_name ?? "Equinix LD8",
           cable: "Frankfurt ↔ Singapore",
         });
-        const response = await fetch(`http://localhost:8000/api/network/route-simulation?${params.toString()}`);
+        const response = await fetch(`${API_URL}/api/network/route-simulation?${params.toString()}`);
         if (response.ok) {
           const nextSimulation = await response.json();
           setSimulation(nextSimulation);
